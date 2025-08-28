@@ -12,145 +12,260 @@ import {
 import "@total-typescript/ts-reset";
 import "@total-typescript/ts-reset/dom";
 import { MySettingManager } from "@/SettingManager";
+import { MultiColumnProcessor } from "./processors/MultiColumnProcessor";
+import { LivePreviewEditor } from "./components/LivePreviewEditor";
 
-// Remember to rename these classes and interfaces!
-
-interface MyPluginSettings {
-	mySetting: string;
+interface MultiColumnSettings {
+	defaultColumns: number;
+	enableInteractiveEditing: boolean;
+	showColumnBorders: boolean;
 }
 
-const DEFAULT_SETTINGS: MyPluginSettings = {
-	mySetting: "default",
+const DEFAULT_SETTINGS: MultiColumnSettings = {
+	defaultColumns: 2,
+	enableInteractiveEditing: true,
+	showColumnBorders: false,
 };
 
-export default class MyPlugin extends Plugin {
+export default class MultiColumnPlugin extends Plugin {
 	settingManager: MySettingManager;
 	private eventRefs: EventRef[] = [];
+	private processor: MultiColumnProcessor;
+	private livePreviewEditor: LivePreviewEditor;
 
 	async onload() {
-		// initialize the setting manager
+		// Initialize the setting manager
 		this.settingManager = new MySettingManager(this);
-
-		// load the setting using setting manager
 		await this.settingManager.loadSettings();
 
-		// This creates an icon in the left ribbon.
+		// Initialize processors
+		this.processor = new MultiColumnProcessor(this);
+		this.livePreviewEditor = new LivePreviewEditor(this);
+
+		// Register markdown code block processor for multi-column
+		this.registerMarkdownCodeBlockProcessor("multi-column", (source, el, ctx) => {
+			this.processor.processCodeBlock(source, el, ctx);
+		});
+
+		// Add ribbon icon for multi-column tools
 		const ribbonIconEl = this.addRibbonIcon(
-			"dice",
-			"Sample Plugin",
+			"columns",
+			"Multi-Column Layout",
 			(evt: MouseEvent) => {
-				// Called when the user clicks the icon.
-				new Notice("This is a notice!");
+				new Notice("Multi-column layout tools activated!");
 			}
 		);
-		// Perform additional things with the ribbon
-		ribbonIconEl.addClass("my-plugin-ribbon-class");
+		ribbonIconEl.addClass("multi-column-ribbon-class");
 
-		// This adds a status bar item to the bottom of the app. Does not work on mobile apps.
-		const statusBarItemEl = this.addStatusBarItem();
-		statusBarItemEl.setText("Status Bar Text");
-
-		// This adds a simple command that can be triggered anywhere
+		// Command to insert multi-column block
 		this.addCommand({
-			id: "open-sample-modal-simple",
-			name: "Open sample modal (simple)",
-			callback: () => {
-				new SampleModal(this.app).open();
-			},
-		});
-		// This adds an editor command that can perform some operation on the current editor instance
-		this.addCommand({
-			id: "sample-editor-command",
-			name: "Sample editor command",
+			id: "insert-multi-column-block",
+			name: "Insert Multi-Column Block",
 			editorCallback: (editor: Editor, view: MarkdownView) => {
-				console.log(editor.getSelection());
-				editor.replaceSelection("Sample Editor Command");
+				const cursor = editor.getCursor();
+				const multiColumnBlock = this.generateMultiColumnBlock();
+				editor.replaceRange(multiColumnBlock, cursor);
 			},
 		});
-		// This adds a complex command that can check whether the current state of the app allows execution of the command
+
+		// Command to toggle interactive editing
 		this.addCommand({
-			id: "open-sample-modal-complex",
-			name: "Open sample modal (complex)",
-			checkCallback: (checking: boolean) => {
-				// Conditions to check
-				const markdownView =
-					this.app.workspace.getActiveViewOfType(MarkdownView);
-				if (markdownView) {
-					// If checking is true, we're simply "checking" if the command can be run.
-					// If checking is false, then we want to actually perform the operation.
-					if (!checking) {
-						new SampleModal(this.app).open();
-					}
-
-					// This command will only show up in Command Palette when the check function returns true
-					return true;
-				}
+			id: "toggle-interactive-editing",
+			name: "Toggle Interactive Multi-Column Editing",
+			callback: () => {
+				const settings = this.settingManager.getSettings();
+				this.settingManager.updateSettings((setting) => {
+					setting.value.enableInteractiveEditing = !settings.enableInteractiveEditing;
+				});
+				new Notice(
+					`Interactive editing ${settings.enableInteractiveEditing ? "disabled" : "enabled"}`
+				);
 			},
 		});
 
-		// This adds a settings tab so the user can configure various aspects of the plugin
-		this.addSettingTab(new SampleSettingTab(this.app, this));
-
-		// If the plugin hooks up any global DOM events (on parts of the app that doesn't belong to this plugin)
-		// Using this function will automatically remove the event listener when this plugin is disabled.
-		this.registerDomEvent(document, "click", (evt: MouseEvent) => {
-			console.log("click", evt);
-		});
-
-		// When registering intervals, this function will automatically clear the interval when the plugin is disabled.
-		this.registerInterval(
-			window.setInterval(() => console.log("setInterval"), 5 * 60 * 1000)
+		// Register live preview mode handling
+		this.registerEvent(
+			this.app.workspace.on("layout-change", () => {
+				this.livePreviewEditor.refreshViews();
+			})
 		);
+
+		// Add settings tab
+		this.addSettingTab(new MultiColumnSettingTab(this.app, this));
+
+		// Load CSS
+		this.loadStyles();
 	}
 
 	onunload() {
 		super.onunload();
-		// unload all event ref
+		// Unload all event refs
 		for (const eventRef of this.eventRefs) {
 			this.app.workspace.offref(eventRef);
 		}
+
+		// Clean up processors
+		this.processor?.cleanup();
+		this.livePreviewEditor?.cleanup();
+	}
+
+	private generateMultiColumnBlock(): string {
+		const settings = this.settingManager.getSettings();
+		const columns = settings.defaultColumns || 2;
+
+		let block = "```multi-column\n";
+		block += `columns: ${columns}\n`;
+
+		// Add empty column placeholders
+		for (let i = 0; i < columns; i++) {
+			block += "===column===\n";
+			block += `Column ${i + 1} content here...\n`;
+		}
+
+		block += "```\n";
+		return block;
+	}
+
+	private loadStyles() {
+		// Add CSS for multi-column layout
+		const style = document.createElement("style");
+		style.textContent = `
+			.multi-column-container {
+				display: flex;
+				flex-direction: column;
+				gap: 10px;
+				margin: 1em 0;
+			}
+
+			.multi-column-controls {
+				order: -1;
+			}
+
+			.multi-column-content {
+				display: flex;
+				gap: 20px;
+			}
+
+			.multi-column-item {
+				flex: 1;
+				min-width: 0;
+				padding: 8px;
+				border-radius: 4px;
+				transition: background-color 0.2s;
+			}
+
+			.multi-column-item[contenteditable="true"] {
+				min-height: 100px;
+				border: 1px dashed transparent;
+			}
+
+			.multi-column-item[contenteditable="true"]:hover {
+				border-color: var(--interactive-accent);
+				background: var(--background-primary-alt);
+			}
+
+			.multi-column-item[contenteditable="true"]:focus {
+				border-color: var(--interactive-accent);
+				background: var(--background-primary-alt);
+				box-shadow: 0 0 0 2px var(--interactive-accent-alpha);
+			}
+
+			.multi-column-container.show-borders .multi-column-item {
+				border: 1px solid var(--background-modifier-border);
+				padding: 1em;
+			}
+
+			.multi-column-resizer {
+				width: 4px;
+				background: var(--interactive-accent);
+				cursor: col-resize;
+				opacity: 0;
+				transition: opacity 0.2s;
+				border-radius: 2px;
+			}
+
+			.multi-column-content:hover .multi-column-resizer {
+				opacity: 0.5;
+			}
+
+			.multi-column-resizer:hover {
+				opacity: 1 !important;
+			}
+
+			.multi-column-editor-overlay {
+				position: absolute;
+				background: var(--background-primary);
+				border: 1px solid var(--interactive-accent);
+				border-radius: 4px;
+				padding: 8px;
+				z-index: 1000;
+				box-shadow: var(--shadow-l);
+			}
+
+			.multi-column-controls button:hover {
+				background: var(--interactive-accent-hover) !important;
+			}
+
+			.multi-column-controls input:focus {
+				outline: 2px solid var(--interactive-accent);
+				outline-offset: -2px;
+			}
+		`;
+		document.head.appendChild(style);
 	}
 }
 
-class SampleModal extends Modal {
-	constructor(app: App) {
-		super(app);
-	}
+class MultiColumnSettingTab extends PluginSettingTab {
+	plugin: MultiColumnPlugin;
 
-	onOpen() {
-		const { contentEl } = this;
-		contentEl.setText("Woah!");
-	}
-
-	onClose() {
-		const { contentEl } = this;
-		contentEl.empty();
-	}
-}
-
-class SampleSettingTab extends PluginSettingTab {
-	plugin: MyPlugin;
-
-	constructor(app: App, plugin: MyPlugin) {
+	constructor(app: App, plugin: MultiColumnPlugin) {
 		super(app, plugin);
 		this.plugin = plugin;
 	}
 
 	display(): void {
 		const { containerEl } = this;
-
 		containerEl.empty();
 
+		containerEl.createEl("h2", { text: "Multi-Column Layout Settings" });
+
 		new Setting(containerEl)
-			.setName("Setting #1")
-			.setDesc("It's a secret")
-			.addText((text) =>
-				text
-					.setPlaceholder("Enter your secret")
-					.setValue(this.plugin.settingManager.getSettings().test)
+			.setName("Default Columns")
+			.setDesc("Default number of columns when creating new multi-column blocks")
+			.addSlider((slider) =>
+				slider
+					.setLimits(1, 6, 1)
+					.setValue(this.plugin.settingManager.getSettings().defaultColumns)
+					.setDynamicTooltip()
 					.onChange(async (value) => {
 						this.plugin.settingManager.updateSettings((setting) => {
-							setting.value.test = value;
+							setting.value.defaultColumns = value;
+						});
+					})
+			);
+
+		new Setting(containerEl)
+			.setName("Interactive Editing")
+			.setDesc("Enable interactive editing of multi-column layouts in live preview")
+			.addToggle((toggle) =>
+				toggle
+					.setValue(this.plugin.settingManager.getSettings().enableInteractiveEditing)
+					.onChange(async (value) => {
+						this.plugin.settingManager.updateSettings((setting) => {
+							setting.value.enableInteractiveEditing = value;
+						});
+					})
+			);
+
+		new Setting(containerEl)
+			.setName("Show Column Borders")
+			.setDesc("Display borders around columns for better visualization")
+			.addToggle((toggle) =>
+				toggle
+					.setValue(this.plugin.settingManager.getSettings().showColumnBorders)
+					.onChange(async (value) => {
+						this.plugin.settingManager.updateSettings((setting) => {
+							setting.value.showColumnBorders = value;
 						});
 					})
 			);

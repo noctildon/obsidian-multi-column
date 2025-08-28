@@ -146,5 +146,7 @@ export class MySettingManager implements ISettingManager<Setting> {
 }
 
 export const DEFAULT_SETTING: Setting = {
-	test: "test",
+	defaultColumns: 2,
+	enableInteractiveEditing: true,
+	showColumnBorders: false,
 };

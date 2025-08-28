@@ -1,5 +1,7 @@
 import { z } from "zod";
 
 export const SettingSchema = z.object({
-	test: z.string().default("test"),
+	defaultColumns: z.number().default(2),
+	enableInteractiveEditing: z.boolean().default(true),
+	showColumnBorders: z.boolean().default(false),
 });
