@@ -1,4 +1,5 @@
 import { MarkdownPostProcessorContext, MarkdownRenderChild, MarkdownView } from "obsidian";
+import { ColumnEditor } from '../components/ColumnEditor';
 import MultiColumnPlugin from "../main";
 
 export class MultiColumnProcessor {
@@ -79,23 +80,12 @@ export class MultiColumnProcessor {
 		const contentWrapper = document.createElement('div');
 		contentWrapper.className = 'multi-column-content';
 
-		// Create column elements
+		// Columns placeholder wrappers (editor inserted later)
 		for (let i = 0; i < config.columns; i++) {
 			const column = document.createElement('div');
 			column.className = 'multi-column-item';
 			column.setAttribute('data-column', i.toString());
-
-			// Make columns editable if interactive editing is enabled
-			if (settings.enableInteractiveEditing) {
-				column.contentEditable = 'true';
-				column.style.outline = 'none';
-				column.style.minHeight = '100px';
-				this.attachColumnEvents(column);
-			}
-
 			contentWrapper.appendChild(column);
-
-			// Add resizer (except for last column)
 			if (i < config.columns - 1) {
 				const resizer = document.createElement('div');
 				resizer.className = 'multi-column-resizer';
@@ -148,78 +138,23 @@ export class MultiColumnProcessor {
 		return controls;
 	}
 
-	attachColumnEvents(column: HTMLElement) {
-		// Add placeholder text when empty
-		column.addEventListener('focus', () => {
-			if (column.textContent?.trim() === 'Click to edit...') {
-				column.innerHTML = '';
-			}
-			column.style.background = 'var(--background-primary-alt)';
-		});
-
-		column.addEventListener('blur', () => {
-			if (column.textContent?.trim() === '') {
-				column.textContent = 'Click to edit...';
-				column.style.color = 'var(--text-muted)';
-			} else {
-				column.style.color = '';
-			}
-			column.style.background = '';
-		});
-
-		// Handle paste events to maintain formatting
-		column.addEventListener('paste', (e) => {
-			e.preventDefault();
-			const text = e.clipboardData?.getData('text/plain') || '';
-			// Insert as plain text but preserve line breaks
-			const lines = text.split('\n');
-			if (lines.length > 1) {
-				// For multi-line paste, create div elements
-				const html = lines.map(line => `<div>${line || '<br>'}</div>`).join('');
-				document.execCommand('insertHTML', false, html);
-			} else {
-				document.execCommand('insertText', false, text);
-			}
-		});
-
-		// Handle Enter key for better line break behavior
-		column.addEventListener('keydown', (e) => {
-			if (e.key === 'Enter') {
-				// Let the browser handle Enter naturally to create proper line breaks
-				// The browser will create <div> or <br> elements which our htmlToPlainText handles
-			}
-		});
-	}
+	// attachColumnEvents removed (replaced by CodeMirror editor)
 
 	private addColumn(container: HTMLElement) {
 		const contentWrapper = container.querySelector('.multi-column-content') as HTMLElement;
 		if (!contentWrapper) return;
 
 		const columns = contentWrapper.querySelectorAll('.multi-column-item');
-		const settings = this.plugin.settingManager.getSettings();
-
-		// Create new column
+		// Create new column wrapper
 		const newColumn = document.createElement('div');
 		newColumn.className = 'multi-column-item';
 		newColumn.setAttribute('data-column', columns.length.toString());
-
-		if (settings.enableInteractiveEditing) {
-			newColumn.contentEditable = 'true';
-			newColumn.style.outline = 'none';
-			newColumn.style.minHeight = '100px';
-			newColumn.textContent = 'Click to edit...';
-			newColumn.style.color = 'var(--text-muted)';
-			this.attachColumnEvents(newColumn);
-		}
-
-		// Add resizer before the new column
 		if (columns.length > 0) {
 			const resizer = document.createElement('div');
 			resizer.className = 'multi-column-resizer';
 			this.attachResizerEvents(resizer);
 			contentWrapper.appendChild(resizer);
 		}
-
 		contentWrapper.appendChild(newColumn);
 	}
 
@@ -288,6 +223,7 @@ class MultiColumnRenderChild extends MarkdownRenderChild {
 	private container: HTMLElement;
 	private columnContents: string[];
 	private originalSource: string;
+	private editors: ColumnEditor[] = [];
 
 	constructor(
 		containerEl: HTMLElement,
@@ -320,177 +256,39 @@ class MultiColumnRenderChild extends MarkdownRenderChild {
 	}
 
 	private loadColumnContents() {
-		const columnElements = this.container.querySelectorAll('.multi-column-item');
-
-		columnElements.forEach((column, index) => {
-			const htmlColumn = column as HTMLElement;
-			const content = this.columnContents[index] || '';
-
-			if (content && content.trim() !== '') {
-				// If interactive editing is enabled, convert markdown to HTML for editing
-				const settings = this.plugin.settingManager.getSettings();
-				if (settings.enableInteractiveEditing && htmlColumn.contentEditable === 'true') {
-					htmlColumn.innerHTML = this.markdownToHtml(content);
-				} else {
-					// For non-editable content, render as markdown
-					htmlColumn.innerHTML = this.markdownToHtml(content);
-				}
-			} else {
-				const settings = this.plugin.settingManager.getSettings();
-				if (settings.enableInteractiveEditing) {
-					htmlColumn.textContent = 'Click to edit...';
-					htmlColumn.style.color = 'var(--text-muted)';
-				}
-			}
+		const wrappers = this.container.querySelectorAll('.multi-column-item');
+		this.editors.forEach(e => e.destroy());
+		this.editors = [];
+		wrappers.forEach((wrap, idx) => {
+			const initial = this.columnContents[idx] ?? '';
+			const editor = new ColumnEditor(this.plugin, wrap as HTMLElement, initial, this.ctx.sourcePath, (val) => {
+				this.columnContents[idx] = val;
+				this.debouncedSave();
+			});
+			this.editors.push(editor);
 		});
 	}
 
-	private markdownToHtml(markdown: string): string {
-		// Split into lines first to properly handle empty lines
-		const lines = markdown.split('\n');
-
-		const htmlLines = lines.map(line => {
-			// Handle empty lines
-			if (line.trim() === '') {
-				return '<div><br></div>'; // Empty div with br to maintain spacing
-			}
-
-			// Process markdown formatting for non-empty lines
-			let processedLine = line
-				.replace(/^### (.*$)/gim, '<h3>$1</h3>')
-				.replace(/^## (.*$)/gim, '<h2>$1</h2>')
-				.replace(/^# (.*$)/gim, '<h1>$1</h1>')
-				.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-				.replace(/\*(.*?)\*/g, '<em>$1</em>');
-
-			return `<div>${processedLine}</div>`;
-		});
-
-		return htmlLines.join('');
+	private saveTimer: number | null = null;
+	private debouncedSave() {
+		if (this.saveTimer) window.clearTimeout(this.saveTimer);
+		this.saveTimer = window.setTimeout(() => {
+			this.updateSourceInFile();
+		}, 800);
 	}
 
-	private setupAutoSave() {
-		const columnElements = this.container.querySelectorAll('.multi-column-item');
+	private setupAutoSave() { /* handled by editors' onChange with debounce */ }
 
-		columnElements.forEach((column, index) => {
-			const htmlColumn = column as HTMLElement;
-
-			if (htmlColumn.contentEditable === 'true') {
-				// Save on blur
-				htmlColumn.addEventListener('blur', () => {
-					this.saveColumnContent(index, htmlColumn);
-				});
-
-				// Auto-save after typing stops
-				let saveTimeout: NodeJS.Timeout;
-				htmlColumn.addEventListener('input', () => {
-					clearTimeout(saveTimeout);
-					saveTimeout = setTimeout(() => {
-						this.saveColumnContent(index, htmlColumn);
-					}, 1000); // Save 1 second after typing stops
-				});
-			}
-		});
-	}
-
-	private saveColumnContent(columnIndex: number, columnElement: HTMLElement) {
-		// Convert HTML content back to plain text with preserved newlines
-		const content = this.htmlToPlainText(columnElement.innerHTML);
-
-		// Don't save placeholder text
-		if (content === 'Click to edit...' || content.trim() === '') {
-			this.columnContents[columnIndex] = '';
-		} else {
-			this.columnContents[columnIndex] = content;
-		}
-
-		// Update the source in the file
-		this.updateSourceInFile();
-	}
-
-	private htmlToPlainText(html: string): string {
-		// Create a temporary element to parse the HTML
-		const temp = document.createElement('div');
-		temp.innerHTML = html;
-
-		// Convert various HTML elements to plain text with newlines
-		const text = this.convertElementToText(temp);
-
-		// Clean up excessive trailing newlines, but preserve intentional empty lines
-		// Remove trailing newlines only at the very end
-		return text.replace(/\n+$/, '');
-	}
-
-	private convertElementToText(element: Element): string {
-		let text = '';
-
-		for (const node of Array.from(element.childNodes)) {
-			if (node.nodeType === Node.TEXT_NODE) {
-				text += node.textContent || '';
-			} else if (node.nodeType === Node.ELEMENT_NODE) {
-				const elem = node as Element;
-				const tagName = elem.tagName.toLowerCase();
-
-				// Handle div elements (our main line containers)
-				if (tagName === 'div') {
-					// Check if this is an empty div (represents empty line)
-					const divText = this.convertElementToText(elem);
-					if (divText.trim() === '' || divText === '\n') {
-						// Empty div represents an empty line
-						text += '\n';
-					} else {
-						// Non-empty div with content
-						if (text && !text.endsWith('\n')) {
-							text += '\n';
-						}
-						text += divText;
-						text += '\n';
-					}
-				}
-				// Handle other block elements
-				else if (['p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6'].includes(tagName)) {
-					if (text && !text.endsWith('\n')) {
-						text += '\n';
-					}
-					text += this.convertElementToText(elem);
-					text += '\n';
-				}
-				// Handle br tags (but only if not inside a div we already processed)
-				else if (tagName === 'br') {
-					// Only add newline if we're not already processing it as part of an empty div
-					const parent = elem.parentElement;
-					if (!parent || parent.tagName.toLowerCase() !== 'div' || parent.childNodes.length > 1) {
-						text += '\n';
-					}
-				}
-				// Handle other inline elements
-				else {
-					text += this.convertElementToText(elem);
-				}
-			}
-		}
-
-		return text;
-	}	private updateSourceInFile() {
-		// Create the new source with updated content
+	private updateSourceInFile() {
 		let newSource = `columns: ${this.config.columns}\n`;
-
-		// Add column content
-		this.columnContents.forEach((content, index) => {
+		this.columnContents.forEach((content) => {
 			newSource += `===column===\n`;
 			if (content) {
 				newSource += content;
-				// Only add trailing newline if content doesn't already end with one
-				if (!content.endsWith('\n')) {
-					newSource += '\n';
-				}
+				if (!content.endsWith('\n')) newSource += '\n';
 			}
 		});
-
-		// Remove any trailing newline from the entire source
 		newSource = newSource.replace(/\n$/, '');
-
-		// Try to update the source in the file
 		this.updateCodeBlockInFile(newSource);
 	}
 

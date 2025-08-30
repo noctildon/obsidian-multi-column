@@ -6,3 +6,55 @@ available in the app when your plugin is enabled.
 If your plugin does not need CSS, delete this file.
 
 */
+
+.multi-column-container .cm-editor {
+	/* Let height grow naturally to avoid collapsing or caret clipping */
+	font-size: var(--font-text-size);
+	background: var(--background-primary);
+	min-height: 120px; /* match column min height */
+}
+
+.multi-column-container .cm-wikilink {
+	color: var(--text-accent);
+	cursor: pointer;
+	text-decoration: underline;
+}
+
+.multi-column-content {
+	display: flex;
+	gap: 8px;
+}
+
+.multi-column-item {
+	flex: 1 1 0;
+	min-width: 0;
+	min-height: 120px;
+	position: relative;
+	border: 1px solid var(--background-modifier-border);
+	padding: 0;
+	overflow: auto;
+	box-sizing: border-box;
+}
+
+/* Provide internal padding inside editor/content */
+/* Internal padding; ensure content area retains room for caret on first/last lines */
+.multi-column-item .cm-editor, .multi-column-item .cm-content { padding: 6px 8px; }
+
+/* Ensure last line has some breathing space so caret not flush with border */
+.multi-column-item .cm-content { padding-bottom: 12px; }
+
+/* Explicit caret styling to ensure visibility (especially first column) */
+.multi-column-container .cm-cursor {
+	border-left: 2px solid var(--text-normal);
+	margin-left: -1px; /* center thicker caret */
+}
+
+@keyframes mc-caret-blink { 0%, 50% { opacity: 1; } 50.01%, 100% { opacity: 0; } }
+.multi-column-container .cm-focused .cm-cursor { animation: mc-caret-blink 1.1s steps(2, start) infinite; }
+
+.multi-column-resizer {
+	width: 6px;
+	cursor: col-resize;
+	background: var(--background-modifier-border);
+	margin: 0 2px;
+}
