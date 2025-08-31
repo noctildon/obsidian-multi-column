@@ -3,7 +3,6 @@ import {
 	Editor,
 	EventRef,
 	MarkdownView,
-	Modal,
 	Notice,
 	Plugin,
 	PluginSettingTab,
@@ -13,7 +12,6 @@ import "@total-typescript/ts-reset";
 import "@total-typescript/ts-reset/dom";
 import { MySettingManager } from "@/SettingManager";
 import { MultiColumnProcessor } from "./processors/MultiColumnProcessor";
-import { LivePreviewEditor } from "./components/LivePreviewEditor";
 
 interface MultiColumnSettings {
 	defaultColumns: number;
@@ -31,16 +29,12 @@ export default class MultiColumnPlugin extends Plugin {
 	settingManager: MySettingManager;
 	private eventRefs: EventRef[] = [];
 	private processor: MultiColumnProcessor;
-	private livePreviewEditor: LivePreviewEditor;
 
 	async onload() {
-		// Initialize the setting manager
 		this.settingManager = new MySettingManager(this);
 		await this.settingManager.loadSettings();
 
-		// Initialize processors
 		this.processor = new MultiColumnProcessor(this);
-		this.livePreviewEditor = new LivePreviewEditor(this);
 
 		// Register markdown code block processor for multi-column
 		this.registerMarkdownCodeBlockProcessor("multi-column", (source, el, ctx) => {
@@ -83,12 +77,6 @@ export default class MultiColumnPlugin extends Plugin {
 			},
 		});
 
-		// Register live preview mode handling
-		this.registerEvent(
-			this.app.workspace.on("layout-change", () => {
-				this.livePreviewEditor.refreshViews();
-			})
-		);
 
 		// Add settings tab
 		this.addSettingTab(new MultiColumnSettingTab(this.app, this));
@@ -104,9 +92,7 @@ export default class MultiColumnPlugin extends Plugin {
 			this.app.workspace.offref(eventRef);
 		}
 
-		// Clean up processors
 		this.processor?.cleanup();
-		this.livePreviewEditor?.cleanup();
 	}
 
 	private generateMultiColumnBlock(): string {

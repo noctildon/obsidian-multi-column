@@ -138,8 +138,6 @@ export class MultiColumnProcessor {
 		return controls;
 	}
 
-	// attachColumnEvents removed (replaced by CodeMirror editor)
-
 	private addColumn(container: HTMLElement) {
 		const contentWrapper = container.querySelector('.multi-column-content') as HTMLElement;
 		if (!contentWrapper) return;
@@ -254,9 +252,6 @@ class MultiColumnRenderChild extends MarkdownRenderChild {
 		this.loadColumnContents();
 
 		this.containerEl.appendChild(this.container);
-
-		// Set up auto-save on content changes
-		this.setupAutoSave();
 	}
 
 	private loadColumnContents() {
@@ -397,16 +392,6 @@ class MultiColumnRenderChild extends MarkdownRenderChild {
 		this.overlayEl = null;
 		this.currentEditIndex = null;
 	}
-
-	private saveTimer: number | null = null;
-	private debouncedSave() {
-		if (this.saveTimer) window.clearTimeout(this.saveTimer);
-		this.saveTimer = window.setTimeout(() => {
-			this.updateSourceInFile();
-		}, 800);
-	}
-
-	private setupAutoSave() { /* handled by editors' onChange with debounce */ }
 
 	private updateSourceInFile() {
 		let newSource = `columns: ${this.config.columns}\n`;

@@ -33,6 +33,7 @@ function wikilinkPlugin() {
 }
 
 export class ColumnEditor {
+    // popup window editor
 	private view: EditorView | null = null;
 	private language = new Compartment();
 	private sourcePath: string;
@@ -69,17 +70,21 @@ export class ColumnEditor {
 		this.view.dom.addEventListener('click', (e) => {
 			const target = e.target as HTMLElement | null;
 			if (!target) return;
-			const linkEl = target.closest('[data-wikilink]') as HTMLElement | null;
+
+            const linkEl = target.closest('[data-wikilink]') as HTMLElement | null;
 			if (!linkEl) return;
-			// Allow modifier-based new leaf
+
+            // Allow modifier-based new leaf
 			const raw = linkEl.getAttribute('data-wikilink');
 			if (!raw) return;
-			// Extract inner of [[...]]
+
+            // Extract inner of [[...]]
 			const inner = raw.slice(2, -2);
 			const pipeIdx = inner.indexOf('|');
 			const targetPath = (pipeIdx === -1 ? inner : inner.slice(0, pipeIdx)).trim();
 			if (!targetPath) return;
-			e.preventDefault();
+
+            e.preventDefault();
 			e.stopPropagation();
 			const newLeaf = e.shiftKey || e.button === 1;
 			this.plugin.app.workspace.openLinkText(targetPath, this.sourcePath, newLeaf);
