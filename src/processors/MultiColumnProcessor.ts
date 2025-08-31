@@ -1,4 +1,4 @@
-import { MarkdownPostProcessorContext, MarkdownRenderChild, MarkdownView } from "obsidian";
+import { MarkdownPostProcessorContext, MarkdownRenderChild, MarkdownView, MarkdownRenderer } from "obsidian";
 import { ColumnEditor } from '../components/ColumnEditor';
 import MultiColumnPlugin from "../main";
 
@@ -223,7 +223,11 @@ class MultiColumnRenderChild extends MarkdownRenderChild {
 	private container: HTMLElement;
 	private columnContents: string[];
 	private originalSource: string;
-	private editors: ColumnEditor[] = [];
+	// Popup overlay state
+	private overlayEl: HTMLElement | null = null;
+	private overlayEditor: ColumnEditor | null = null;
+	private currentEditIndex: number | null = null;
+	private currentEditValue: string = '';
 
 	constructor(
 		containerEl: HTMLElement,
@@ -257,16 +261,141 @@ class MultiColumnRenderChild extends MarkdownRenderChild {
 
 	private loadColumnContents() {
 		const wrappers = this.container.querySelectorAll('.multi-column-item');
-		this.editors.forEach(e => e.destroy());
-		this.editors = [];
 		wrappers.forEach((wrap, idx) => {
-			const initial = this.columnContents[idx] ?? '';
-			const editor = new ColumnEditor(this.plugin, wrap as HTMLElement, initial, this.ctx.sourcePath, (val) => {
-				this.columnContents[idx] = val;
-				this.debouncedSave();
+			const el = wrap as HTMLElement;
+			el.innerHTML = '';
+			const display = document.createElement('div');
+			display.className = 'multi-column-display';
+			// Render markdown content for nicer preview
+			const md = (this.columnContents[idx] ?? '').trim();
+			if (md) {
+				MarkdownRenderer.renderMarkdown(md, display, this.ctx.sourcePath, this.plugin);
+			} else {
+				display.textContent = '(empty)';
+				display.style.opacity = '0.6';
+			}
+			el.appendChild(display);
+			el.classList.add('multi-column-clickable');
+			el.addEventListener('click', (e) => {
+				e.preventDefault();
+				e.stopPropagation();
+				this.openEditorOverlay(idx, el);
 			});
-			this.editors.push(editor);
 		});
+	}
+
+	private openEditorOverlay(index: number, columnEl: HTMLElement) {
+		// Avoid reopening if same index already open
+		if (this.currentEditIndex === index && this.overlayEl) return;
+		this.closeOverlay(false);
+		this.currentEditIndex = index;
+		this.currentEditValue = this.columnContents[index] ?? '';
+
+		const rect = columnEl.getBoundingClientRect();
+		const overlay = document.createElement('div');
+		overlay.className = 'multi-column-editor-overlay';
+		overlay.style.position = 'absolute';
+		overlay.style.top = `${rect.top + window.scrollY}px`;
+		overlay.style.left = `${rect.left + window.scrollX}px`;
+		overlay.style.minWidth = `${Math.max(rect.width, 260)}px`;
+		overlay.style.maxWidth = '600px';
+		overlay.style.background = 'var(--background-primary)';
+		overlay.style.display = 'flex';
+		overlay.style.flexDirection = 'column';
+		overlay.style.gap = '8px';
+
+		const editorHost = document.createElement('div');
+		editorHost.style.minHeight = '140px';
+		editorHost.style.border = '1px solid var(--background-modifier-border)';
+		editorHost.style.borderRadius = '4px';
+		editorHost.style.padding = '4px';
+		overlay.appendChild(editorHost);
+
+		const actions = document.createElement('div');
+		actions.style.display = 'flex';
+		actions.style.justifyContent = 'space-between';
+		actions.style.gap = '4px';
+
+		const leftGroup = document.createElement('div');
+		leftGroup.style.display = 'flex';
+		leftGroup.style.gap = '4px';
+
+		const rightGroup = document.createElement('div');
+		rightGroup.style.display = 'flex';
+		rightGroup.style.gap = '4px';
+
+		const saveBtn = document.createElement('button');
+		saveBtn.textContent = 'Save';
+		saveBtn.className = 'mod-cta';
+		saveBtn.onclick = () => this.closeOverlay(true);
+
+		const cancelBtn = document.createElement('button');
+		cancelBtn.textContent = 'Cancel';
+		cancelBtn.onclick = () => this.closeOverlay(false);
+
+		leftGroup.appendChild(saveBtn);
+		leftGroup.appendChild(cancelBtn);
+		actions.appendChild(leftGroup);
+
+		const hint = document.createElement('div');
+		hint.style.fontSize = '11px';
+		hint.style.opacity = '0.7';
+		hint.textContent = 'Esc: cancel · Click outside: save';
+		rightGroup.appendChild(hint);
+		actions.appendChild(rightGroup);
+		overlay.appendChild(actions);
+
+		document.body.appendChild(overlay);
+		this.overlayEl = overlay;
+
+		// Instantiate CodeMirror editor (no autosave; just track currentEditValue)
+		this.overlayEditor = new ColumnEditor(this.plugin, editorHost, this.currentEditValue, this.ctx.sourcePath, (val) => {
+			this.currentEditValue = val; // live update internal buffer only
+		});
+
+		// Focus editor
+		setTimeout(() => this.overlayEditor?.focus(), 0);
+
+		// Outside click handler – save on outside click
+		const outsideClick = (e: MouseEvent) => {
+			if (!overlay.contains(e.target as Node)) {
+				document.removeEventListener('mousedown', outsideClick, true);
+				this.closeOverlay(true);
+			}
+		};
+		document.addEventListener('mousedown', outsideClick, true);
+
+		// Escape key to cancel
+		const keyHandler = (e: KeyboardEvent) => {
+			if (e.key === 'Escape') {
+				e.preventDefault();
+				this.closeOverlay(false);
+			}
+		};
+		document.addEventListener('keydown', keyHandler, { once: true });
+
+		// Store cleanup references on element for safety
+		(overlay as any)._cleanup = () => {
+			document.removeEventListener('mousedown', outsideClick, true);
+		};
+	}
+
+	private closeOverlay(commit: boolean) {
+		if (!this.overlayEl) return;
+		if (commit && this.currentEditIndex != null) {
+			// Persist change then re-render code block by updating file
+			this.columnContents[this.currentEditIndex] = this.currentEditValue;
+			this.updateSourceInFile();
+		}
+		// Destroy editor
+		this.overlayEditor?.destroy();
+		this.overlayEditor = null;
+		// Cleanup handlers
+		const cleanup = (this.overlayEl as any)._cleanup;
+		if (cleanup) cleanup();
+		this.overlayEl.remove();
+		this.overlayEl = null;
+		this.currentEditIndex = null;
 	}
 
 	private saveTimer: number | null = null;

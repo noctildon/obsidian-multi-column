@@ -170,6 +170,16 @@ export default class MultiColumnPlugin extends Plugin {
 				box-shadow: 0 0 0 2px var(--interactive-accent-alpha);
 			}
 
+			.multi-column-item.multi-column-clickable {
+				cursor: pointer;
+				position: relative;
+			}
+			.multi-column-item.multi-column-clickable:hover {
+				background: var(--background-primary-alt);
+			}
+			.multi-column-display p { margin: 0 0 0.6em; }
+			.multi-column-display p:last-child { margin-bottom: 0; }
+
 			.multi-column-container.show-borders .multi-column-item {
 				border: 1px solid var(--background-modifier-border);
 				padding: 1em;
