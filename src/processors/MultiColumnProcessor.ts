@@ -300,6 +300,10 @@ class MultiColumnRenderChild extends MarkdownRenderChild {
 				// Don't trigger edit if clicking on control buttons
 				const target = e.target as HTMLElement;
 				if (target.classList.contains('multi-column-btn')) return;
+
+				// Don't trigger edit if clicking on links or other interactive elements
+				if (target.tagName === 'A' || target.closest('a')) return;
+
 				e.preventDefault();
 				e.stopPropagation();
 				this.openEditorOverlay(idx, el);
