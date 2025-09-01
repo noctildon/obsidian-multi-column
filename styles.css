@@ -203,3 +203,42 @@ This CSS file contains all the styles for the multi-column layout plugin.
 .multi-column-container .cm-focused .cm-cursor {
 	animation: mc-caret-blink 1.1s steps(2, start) infinite;
 }
+
+/* ===== COLUMN DELETE BUTTON STYLES ===== */
+.multi-column-header {
+	position: relative;
+	display: flex;
+	justify-content: flex-end;
+	margin-bottom: 4px;
+}
+
+.multi-column-delete-btn {
+	position: absolute;
+	top: -2px;
+	right: -2px;
+	width: 20px;
+	height: 20px;
+	border-radius: 50%;
+	background: var(--background-modifier-error);
+	color: var(--text-on-accent);
+	border: none;
+	font-size: 14px;
+	font-weight: bold;
+	cursor: pointer;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	opacity: 0;
+	transition: opacity 0.2s ease;
+	z-index: 10;
+}
+
+.multi-column-item:hover .multi-column-delete-btn {
+	opacity: 0.8;
+}
+
+.multi-column-delete-btn:hover {
+	opacity: 1 !important;
+	background: var(--background-modifier-error-hover) !important;
+	transform: scale(1.1);
+}
