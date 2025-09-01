@@ -126,6 +126,32 @@ This CSS file contains all the styles for the multi-column layout plugin.
 	padding: 8px;
 	z-index: 1000;
 	box-shadow: var(--shadow-l);
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+}
+
+.multi-column-editor-host {
+	min-height: 140px;
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 4px;
+	padding: 4px;
+}
+
+.multi-column-editor-actions {
+	display: flex;
+	justify-content: space-between;
+	gap: 4px;
+}
+
+.multi-column-editor-actions-group {
+	display: flex;
+	gap: 4px;
+}
+
+.multi-column-editor-hint {
+	font-size: 11px;
+	opacity: 0.7;
 }
 
 /* ===== CODEMIRROR STYLES ===== */

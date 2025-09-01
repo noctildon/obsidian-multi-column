@@ -261,7 +261,7 @@ class MultiColumnRenderChild extends MarkdownRenderChild {
 	}
 
 	private openEditorOverlay(index: number, columnEl: HTMLElement) {
-        // popup overlay window for editing context in a column
+        // Popup overlay window for editing context in a column
 
 		// Avoid reopening if same index already open
 		if (this.currentEditIndex === index && this.overlayEl) return;
@@ -272,35 +272,24 @@ class MultiColumnRenderChild extends MarkdownRenderChild {
 		const rect = columnEl.getBoundingClientRect();
 		const overlay = document.createElement('div');
 		overlay.className = 'multi-column-editor-overlay';
-		overlay.style.position = 'absolute';
+		// Keep dynamic positioning styles inline since they depend on column position
 		overlay.style.top = `${rect.top + window.scrollY}px`;
 		overlay.style.left = `${rect.left + window.scrollX}px`;
 		overlay.style.minWidth = `${Math.max(rect.width, 260)}px`;
 		overlay.style.maxWidth = '600px';
-		overlay.style.background = 'var(--background-primary)';
-		overlay.style.display = 'flex';
-		overlay.style.flexDirection = 'column';
-		overlay.style.gap = '8px';
 
 		const editorHost = document.createElement('div');
-		editorHost.style.minHeight = '140px';
-		editorHost.style.border = '1px solid var(--background-modifier-border)';
-		editorHost.style.borderRadius = '4px';
-		editorHost.style.padding = '4px';
+		editorHost.className = 'multi-column-editor-host';
 		overlay.appendChild(editorHost);
 
 		const actions = document.createElement('div');
-		actions.style.display = 'flex';
-		actions.style.justifyContent = 'space-between';
-		actions.style.gap = '4px';
+		actions.className = 'multi-column-editor-actions';
 
 		const leftGroup = document.createElement('div');
-		leftGroup.style.display = 'flex';
-		leftGroup.style.gap = '4px';
+		leftGroup.className = 'multi-column-editor-actions-group';
 
 		const rightGroup = document.createElement('div');
-		rightGroup.style.display = 'flex';
-		rightGroup.style.gap = '4px';
+		rightGroup.className = 'multi-column-editor-actions-group';
 
 		const saveBtn = document.createElement('button');
 		saveBtn.textContent = 'Save';
@@ -316,8 +305,7 @@ class MultiColumnRenderChild extends MarkdownRenderChild {
 		actions.appendChild(leftGroup);
 
 		const hint = document.createElement('div');
-		hint.style.fontSize = '11px';
-		hint.style.opacity = '0.7';
+		hint.className = 'multi-column-editor-hint';
 		hint.textContent = 'Esc: cancel · Click outside: save';
 		rightGroup.appendChild(hint);
 		actions.appendChild(rightGroup);
