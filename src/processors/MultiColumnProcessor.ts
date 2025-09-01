@@ -98,35 +98,17 @@ export class MultiColumnProcessor {
 	private createEditControls(container: HTMLElement, config: any): HTMLElement {
 		const controls = document.createElement('div');
 		controls.className = 'multi-column-controls';
-		controls.style.cssText = `
-			display: flex;
-			gap: 8px;
-			margin-bottom: 8px;
-			padding: 8px;
-			background: var(--background-secondary);
-			border-radius: 4px;
-			font-size: 12px;
-		`;
 
 		// Add column button
 		const addBtn = document.createElement('button');
 		addBtn.textContent = '+';
 		addBtn.title = 'Add column';
-		addBtn.style.cssText = `
-			padding: 4px 8px;
-			background: var(--interactive-accent);
-			color: var(--text-on-accent);
-			border: none;
-			border-radius: 3px;
-			cursor: pointer;
-		`;
 		addBtn.onclick = () => this.addColumn(container);
 
 		// Remove column button
 		const removeBtn = document.createElement('button');
 		removeBtn.textContent = '−';
 		removeBtn.title = 'Remove column';
-		removeBtn.style.cssText = addBtn.style.cssText;
 		removeBtn.onclick = () => this.removeColumn(container);
 
 		controls.appendChild(addBtn);
@@ -218,7 +200,6 @@ class MultiColumnRenderChild extends MarkdownRenderChild {
 	private container: HTMLElement;
 	private columnContents: string[];
 	private originalSource: string;
-	// Popup overlay state
 	private overlayEl: HTMLElement | null = null;
 	private overlayEditor: ColumnEditor | null = null;
 	private currentEditIndex: number | null = null;
@@ -280,6 +261,8 @@ class MultiColumnRenderChild extends MarkdownRenderChild {
 	}
 
 	private openEditorOverlay(index: number, columnEl: HTMLElement) {
+        // popup overlay window for editing context in a column
+
 		// Avoid reopening if same index already open
 		if (this.currentEditIndex === index && this.overlayEl) return;
 		this.closeOverlay(false);
