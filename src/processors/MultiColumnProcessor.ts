@@ -162,7 +162,8 @@ class MultiColumnRenderChild extends MarkdownRenderChild {
 	}
 
 	private loadColumnContents() {
-		const columns = this.container.querySelectorAll('.multi-column-item');
+        // Load and render column contents
+        const columns = this.container.querySelectorAll('.multi-column-item');
 
         columns.forEach((col, idx) => {
 			const el = col as HTMLElement;
@@ -171,8 +172,11 @@ class MultiColumnRenderChild extends MarkdownRenderChild {
 			display.className = 'multi-column-display';
 
             // Render markdown content for nicer preview
-			const md = (this.columnContents[idx] ?? '').trim();
-			if (md) {
+			let md = this.columnContents[idx] ?? '';
+			if (md.trim()) {
+				// Preserve multiple consecutive empty lines by replacing them with HTML breaks
+				// This prevents markdown renderer from collapsing them
+				md = this.preserveConsecutiveEmptyLines(md);
 				MarkdownRenderer.render(this.plugin.app, md, display, this.ctx.sourcePath, this.plugin);
 			} else {
 				display.textContent = '(empty)';
@@ -186,6 +190,18 @@ class MultiColumnRenderChild extends MarkdownRenderChild {
 				e.stopPropagation();
 				this.openEditorOverlay(idx, el);
 			});
+		});
+	}
+
+	private preserveConsecutiveEmptyLines(content: string): string {
+		// Replace multiple consecutive empty lines with HTML breaks to prevent
+		// markdown renderer from collapsing them
+		// Pattern: 2+ consecutive newlines get converted to include HTML breaks
+		return content.replace(/\n{3,}/g, (match) => {
+			// For n consecutive newlines (n >= 3), replace with 1 newline + (n-2) <br> tags + 1 newline
+			const numNewlines = match.length;
+			const numBreaks = numNewlines - 2;
+			return '\n' + '<br>'.repeat(numBreaks) + '\n';
 		});
 	}
 
