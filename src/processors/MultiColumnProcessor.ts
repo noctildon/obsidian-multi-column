@@ -74,7 +74,7 @@ export class MultiColumnProcessor {
 		}
 
         // Add/Remove columns
-        const editControls = this.createEditControls(container, config);
+        const editControls = this.createEditControls(container, config, onResizeComplete);
         container.appendChild(editControls);
 
 		const contentWrapper = document.createElement('div');
@@ -109,7 +109,7 @@ export class MultiColumnProcessor {
 		return container;
 	}
 
-	private createEditControls(container: HTMLElement, config: any): HTMLElement {
+	private createEditControls(container: HTMLElement, config: any, onResizeComplete?: () => void): HTMLElement {
 		const controls = document.createElement('div');
 		controls.className = 'multi-column-controls';
 
@@ -117,12 +117,13 @@ export class MultiColumnProcessor {
 		const addBtn = document.createElement('button');
 		addBtn.textContent = '+';
 		addBtn.title = 'Add column';
+        addBtn.onclick = () => this.addColumn(container, config, onResizeComplete);
 
 		// Remove column button
 		const removeBtn = document.createElement('button');
 		removeBtn.textContent = '−';
 		removeBtn.title = 'Remove column';
-		removeBtn.onclick = () => this.removeColumn(container);
+		removeBtn.onclick = () => this.removeColumn(container, config, onResizeComplete);
 
 		controls.appendChild(addBtn);
 		controls.appendChild(removeBtn);
@@ -201,11 +202,58 @@ export class MultiColumnProcessor {
 		document.body.style.userSelect = 'none';
 	}
 
-    private addColumn(container: HTMLElement) {
-        // TODO: Implement column addition logic
+    private addColumn(container: HTMLElement, config: any, onResizeComplete?: () => void) {
+        const contentWrapper = container.querySelector('.multi-column-content') as HTMLElement;
+        if (!contentWrapper) return;
+
+        const currentColumns = Array.from(contentWrapper.querySelectorAll('.multi-column-item')) as HTMLElement[];
+        if (currentColumns.length === 0) return;
+
+        // Update config
+        config.columns++;
+
+        // Calculate new equal column width
+        const newColumnWidth = 100 / config.columns;
+
+        // Create the new column
+        const newColumn = document.createElement('div');
+        newColumn.className = 'multi-column-item';
+        newColumn.setAttribute('data-column', (currentColumns.length).toString());
+        newColumn.style.flexBasis = `${newColumnWidth}%`;
+        newColumn.style.minWidth = '100px';
+
+        // Add empty content placeholder
+        const display = document.createElement('div');
+        display.className = 'multi-column-display';
+        display.textContent = '(empty)';
+        display.style.opacity = '0.6';
+        newColumn.appendChild(display);
+
+        // Make it clickable (this will be handled by the render child later)
+        newColumn.classList.add('multi-column-clickable');
+
+        // Create a resizer before the new column (between last existing column and new column)
+        const newResizer = this.createColumnResizer(currentColumns.length - 1, onResizeComplete);
+
+        // Add resizer and new column to the DOM
+        contentWrapper.appendChild(newResizer);
+        contentWrapper.appendChild(newColumn);
+
+        // Update all existing columns to have equal width
+        currentColumns.forEach((column, index) => {
+            column.style.flexBasis = `${newColumnWidth}%`;
+        });
+
+        // Update column widths in config to equal distribution
+        config.columnWidths = new Array(config.columns).fill(newColumnWidth);
+
+        // Trigger update callback to persist changes
+        if (onResizeComplete) {
+            onResizeComplete();
+        }
     }
 
-    private removeColumn(container: HTMLElement) {
+    private removeColumn(container: HTMLElement, config: any, onResizeComplete?: () => void) {
         // TODO: Implement column removal logic
     }
 
@@ -409,6 +457,15 @@ class MultiColumnRenderChild extends MarkdownRenderChild {
 	private updateSourceInFile() {
 		// Capture current column widths before saving
 		this.updateColumnWidthsInConfig();
+
+		// Ensure columnContents array matches the current column count
+		while (this.columnContents.length < this.config.columns) {
+			this.columnContents.push('');
+		}
+		// If there are more contents than columns, truncate
+		if (this.columnContents.length > this.config.columns) {
+			this.columnContents = this.columnContents.slice(0, this.config.columns);
+		}
 
 		let newSource = `columns: ${this.config.columns}\n`;
 
