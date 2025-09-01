@@ -42,7 +42,9 @@ export class MultiColumnProcessor {
 				}
 				columnContents[currentColumn] += line + '\n';
 			}
-		}		// Clean up excessive trailing newlines, but preserve intentional ones
+		}
+
+        // Clean up excessive trailing newlines, but preserve intentional ones
 		columnContents.forEach((content, i) => {
 			if (content) {
 				// Remove only excessive trailing newlines (more than 2)
@@ -67,11 +69,9 @@ export class MultiColumnProcessor {
 			container.classList.add('show-borders');
 		}
 
-		// Add edit controls if interactive editing is enabled
-		if (settings.enableInteractiveEditing) {
-			const editControls = this.createEditControls(container, config);
-			container.appendChild(editControls);
-		}
+        // Add/Remove columns
+        const editControls = this.createEditControls(container, config);
+        container.appendChild(editControls);
 
 		// Create content wrapper for horizontal columns
 		const contentWrapper = document.createElement('div');
@@ -382,10 +382,12 @@ class MultiColumnRenderChild extends MarkdownRenderChild {
 			this.columnContents[this.currentEditIndex] = this.currentEditValue;
 			this.updateSourceInFile();
 		}
-		// Destroy editor
+
+        // Destroy editor
 		this.overlayEditor?.destroy();
 		this.overlayEditor = null;
-		// Cleanup handlers
+
+        // Cleanup handlers
 		const cleanup = (this.overlayEl as any)._cleanup;
 		if (cleanup) cleanup();
 		this.overlayEl.remove();

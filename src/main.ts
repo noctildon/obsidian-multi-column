@@ -15,13 +15,11 @@ import { MultiColumnProcessor } from "./processors/MultiColumnProcessor";
 
 interface MultiColumnSettings {
 	defaultColumns: number;
-	enableInteractiveEditing: boolean;
 	showColumnBorders: boolean;
 }
 
 const DEFAULT_SETTINGS: MultiColumnSettings = {
 	defaultColumns: 2,
-	enableInteractiveEditing: true,
 	showColumnBorders: false,
 };
 
@@ -41,15 +39,6 @@ export default class MultiColumnPlugin extends Plugin {
 			this.processor.processCodeBlock(source, el, ctx);
 		});
 
-		const ribbonIconEl = this.addRibbonIcon(
-			"columns",
-			"Multi-Column Layout",
-			(evt: MouseEvent) => {
-				new Notice("Multi-column layout tools activated!");
-			}
-		);
-		ribbonIconEl.addClass("multi-column-ribbon-class");
-
 		this.addCommand({
 			id: "insert-multi-column-block",
 			name: "Insert Multi-Column Block",
@@ -60,21 +49,6 @@ export default class MultiColumnPlugin extends Plugin {
 			},
 		});
 
-		this.addCommand({
-			id: "toggle-interactive-editing",
-			name: "Toggle Interactive Multi-Column Editing",
-			callback: () => {
-				const settings = this.settingManager.getSettings();
-				this.settingManager.updateSettings((setting) => {
-					setting.value.enableInteractiveEditing = !settings.enableInteractiveEditing;
-				});
-				new Notice(
-					`Interactive editing ${settings.enableInteractiveEditing ? "disabled" : "enabled"}`
-				);
-			},
-		});
-
-
 		// Add settings tab
 		this.addSettingTab(new MultiColumnSettingTab(this.app, this));
 
@@ -84,7 +58,6 @@ export default class MultiColumnPlugin extends Plugin {
 
 	onunload() {
 		super.onunload();
-		// Unload all event refs
 		for (const eventRef of this.eventRefs) {
 			this.app.workspace.offref(eventRef);
 		}
@@ -110,7 +83,7 @@ export default class MultiColumnPlugin extends Plugin {
 	}
 
 	private loadStyles() {
-		// Add CSS for multi-column layout
+		// multi-column layout CSS
 		const style = document.createElement("style");
 		style.textContent = `
 			.multi-column-container {
@@ -232,19 +205,6 @@ class MultiColumnSettingTab extends PluginSettingTab {
 					.onChange(async (value) => {
 						this.plugin.settingManager.updateSettings((setting) => {
 							setting.value.defaultColumns = value;
-						});
-					})
-			);
-
-		new Setting(containerEl)
-			.setName("Interactive Editing")
-			.setDesc("Enable interactive editing of multi-column layouts in live preview")
-			.addToggle((toggle) =>
-				toggle
-					.setValue(this.plugin.settingManager.getSettings().enableInteractiveEditing)
-					.onChange(async (value) => {
-						this.plugin.settingManager.updateSettings((setting) => {
-							setting.value.enableInteractiveEditing = value;
 						});
 					})
 			);
