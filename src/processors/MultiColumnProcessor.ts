@@ -236,13 +236,24 @@ class MultiColumnRenderChild extends MarkdownRenderChild {
 
 			// Add column left button
 			const addLeftBtn = document.createElement('button');
-			addLeftBtn.textContent = '◀+';
+			addLeftBtn.textContent = '◀';
 			addLeftBtn.className = 'multi-column-btn multi-column-add-btn';
 			addLeftBtn.title = `Add column to the left`;
 			addLeftBtn.onclick = (e) => {
 				e.preventDefault();
 				e.stopPropagation();
 				this.addColumnAt(idx, 'left');
+			};
+
+            // Add column right button
+			const addRightBtn = document.createElement('button');
+			addRightBtn.textContent = '▶';
+			addRightBtn.className = 'multi-column-btn multi-column-add-btn';
+			addRightBtn.title = `Add column to the right`;
+			addRightBtn.onclick = (e) => {
+				e.preventDefault();
+				e.stopPropagation();
+				this.addColumnAt(idx, 'right');
 			};
 
 			// Delete button (only show if more than 1 column)
@@ -259,24 +270,12 @@ class MultiColumnRenderChild extends MarkdownRenderChild {
 				};
 			}
 
-			// Add column right button
-			const addRightBtn = document.createElement('button');
-			addRightBtn.textContent = '+▶';
-			addRightBtn.className = 'multi-column-btn multi-column-add-btn';
-			addRightBtn.title = `Add column to the right`;
-			addRightBtn.onclick = (e) => {
-				e.preventDefault();
-				e.stopPropagation();
-				this.addColumnAt(idx, 'right');
-			};
-
 			// Append buttons in order: left, delete (if exists), right
 			buttonContainer.appendChild(addLeftBtn);
 			if (deleteBtn) {
 				buttonContainer.appendChild(deleteBtn);
 			}
 			buttonContainer.appendChild(addRightBtn);
-
 			header.appendChild(buttonContainer);
 			el.appendChild(header);
 

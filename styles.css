@@ -204,7 +204,7 @@ This CSS file contains all the styles for the multi-column layout plugin.
 	animation: mc-caret-blink 1.1s steps(2, start) infinite;
 }
 
-/* ===== COLUMN DELETE BUTTON STYLES ===== */
+
 .multi-column-header {
 	position: relative;
 	display: flex;
@@ -212,33 +212,78 @@ This CSS file contains all the styles for the multi-column layout plugin.
 	margin-bottom: 4px;
 }
 
-.multi-column-delete-btn {
-	position: absolute;
-	top: -2px;
-	right: -2px;
-	width: 20px;
-	height: 20px;
-	border-radius: 50%;
-	background: var(--background-modifier-error);
-	color: var(--text-on-accent);
-	border: none;
-	font-size: 14px;
-	font-weight: bold;
-	cursor: pointer;
+
+.multi-column-button-container {
 	display: flex;
+	gap: 2px;
 	align-items: center;
-	justify-content: center;
-	opacity: 0;
-	transition: opacity 0.2s ease;
-	z-index: 10;
+	margin-left: auto;
 }
 
-.multi-column-item:hover .multi-column-delete-btn {
-	opacity: 0.8;
+.multi-column-btn {
+	appearance: none;
+	border: 1px solid var(--background-modifier-border);
+	background: var(--background-secondary);
+	color: var(--text-normal);
+	font-size: 9px;
+	line-height: 1.1;
+	padding: 2px 5px;
+	border-radius: 2px;
+	cursor: pointer;
+	user-select: none;
+	transition: background-color .12s ease, border-color .12s ease, color .12s ease, transform .08s ease;
+	font-weight: 500;
+}
+
+.multi-column-btn:focus-visible {
+	outline: 2px solid var(--interactive-accent);
+	outline-offset: 1px;
+}
+
+.multi-column-btn:hover {
+	background: var(--background-modifier-hover);
+	color: var(--text-accent);
+	border-color: var(--interactive-accent);
+}
+
+.multi-column-btn:active {
+	transform: translateY(1px);
+}
+
+
+.multi-column-add-btn {
+	background: var(--interactive-accent);
+	border-color: var(--interactive-accent);
+	color: var(--text-on-accent);
+	font-weight: 600;
+}
+
+.multi-column-add-btn:hover {
+	background: var(--interactive-accent-hover) !important;
+	color: var(--text-on-accent) !important;
+}
+
+.multi-column-delete-btn {
+	background: var(--background-modifier-error);
+	border-color: var(--background-modifier-error);
+	color: var(--text-on-accent);
+	font-weight: 600;
 }
 
 .multi-column-delete-btn:hover {
-	opacity: 1 !important;
 	background: var(--background-modifier-error-hover) !important;
-	transform: scale(1.1);
+	border-color: var(--background-modifier-error-hover) !important;
+	color: var(--text-on-accent) !important;
+}
+
+.multi-column-add-btn, .multi-column-delete-btn {
+	min-width: 26px; /* compact footprint */
+	text-align: center;
+	padding-left: 4px; /* keep symbols centered */
+	padding-right: 4px;
+}
+
+
+@media (hover: none) {
+	.multi-column-btn:hover { background: var(--background-secondary); color: var(--text-normal); }
 }
