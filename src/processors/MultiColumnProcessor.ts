@@ -73,10 +73,6 @@ export class MultiColumnProcessor {
 			container.classList.add('show-borders');
 		}
 
-        // Add/Remove columns
-        const editControls = this.createEditControls(container, config, onResizeComplete);
-        container.appendChild(editControls);
-
 		const contentWrapper = document.createElement('div');
 		contentWrapper.className = 'multi-column-content';
 
@@ -107,28 +103,6 @@ export class MultiColumnProcessor {
 
 		container.appendChild(contentWrapper);
 		return container;
-	}
-
-	private createEditControls(container: HTMLElement, config: any, onResizeComplete?: () => void): HTMLElement {
-		const controls = document.createElement('div');
-		controls.className = 'multi-column-controls';
-
-		// Add column button
-		const addBtn = document.createElement('button');
-		addBtn.textContent = '+';
-		addBtn.title = 'Add column';
-        addBtn.onclick = () => this.addColumn(container, config, onResizeComplete);
-
-		// Remove column button
-		const removeBtn = document.createElement('button');
-		removeBtn.textContent = '−';
-		removeBtn.title = 'Remove column';
-		removeBtn.onclick = () => this.removeColumn(container, config, onResizeComplete);
-
-		controls.appendChild(addBtn);
-		controls.appendChild(removeBtn);
-
-		return controls;
 	}
 
 	private createColumnResizer(columnIndex: number, onResizeComplete?: () => void): HTMLElement {
@@ -202,95 +176,6 @@ export class MultiColumnProcessor {
 		document.body.style.userSelect = 'none';
 	}
 
-    private addColumn(container: HTMLElement, config: any, onResizeComplete?: () => void) {
-        const contentWrapper = container.querySelector('.multi-column-content') as HTMLElement;
-        if (!contentWrapper) return;
-
-        const currentColumns = Array.from(contentWrapper.querySelectorAll('.multi-column-item')) as HTMLElement[];
-        if (currentColumns.length === 0) return;
-
-        // Update config
-        config.columns++;
-
-        // Calculate new equal column width
-        const newColumnWidth = 100 / config.columns;
-
-        // Create the new column
-        const newColumn = document.createElement('div');
-        newColumn.className = 'multi-column-item';
-        newColumn.setAttribute('data-column', (currentColumns.length).toString());
-        newColumn.style.flexBasis = `${newColumnWidth}%`;
-        newColumn.style.minWidth = '100px';
-
-        // Add empty content placeholder
-        const display = document.createElement('div');
-        display.className = 'multi-column-display';
-        display.textContent = '(empty)';
-        display.style.opacity = '0.6';
-        newColumn.appendChild(display);
-
-        // Make it clickable (this will be handled by the render child later)
-        newColumn.classList.add('multi-column-clickable');
-
-        // Create a resizer before the new column (between last existing column and new column)
-        const newResizer = this.createColumnResizer(currentColumns.length - 1, onResizeComplete);
-
-        // Add resizer and new column to the DOM
-        contentWrapper.appendChild(newResizer);
-        contentWrapper.appendChild(newColumn);
-
-        // Update all existing columns to have equal width
-        currentColumns.forEach((column, index) => {
-            column.style.flexBasis = `${newColumnWidth}%`;
-        });
-
-        // Update column widths in config to equal distribution
-        config.columnWidths = new Array(config.columns).fill(newColumnWidth);
-
-        // Trigger update callback to persist changes
-        if (onResizeComplete) {
-            onResizeComplete();
-        }
-    }
-
-    private removeColumn(container: HTMLElement, config: any, onResizeComplete?: () => void) {
-        const contentWrapper = container.querySelector('.multi-column-content') as HTMLElement;
-        if (!contentWrapper) return;
-
-        const currentColumns = Array.from(contentWrapper.querySelectorAll('.multi-column-item')) as HTMLElement[];
-        const currentResizers = Array.from(contentWrapper.querySelectorAll('.multi-column-resizer')) as HTMLElement[];
-
-        // Don't allow removing if only one column left
-        if (currentColumns.length <= 1) return;
-
-        // Remove the last column
-        const lastColumn = currentColumns[currentColumns.length - 1];
-        const lastResizer = currentResizers[currentResizers.length - 1]; // Resizer before the last column
-
-        if (lastColumn) {
-            lastColumn.remove();
-        }
-        if (lastResizer) {
-            lastResizer.remove();
-        }
-
-        config.columns--;
-
-        // Update all remaining columns to have equal width
-        const newColumnWidth = 100 / config.columns;
-        const remainingColumns = Array.from(contentWrapper.querySelectorAll('.multi-column-item')) as HTMLElement[];
-        remainingColumns.forEach((column) => {
-            column.style.flexBasis = `${newColumnWidth}%`;
-        });
-
-        config.columnWidths = new Array(config.columns).fill(newColumnWidth);
-
-        // Trigger update callback to persist changes
-        if (onResizeComplete) {
-            onResizeComplete();
-        }
-    }
-
 	cleanup() {
 		// Clean up any event listeners or resources
 	}
@@ -341,24 +226,59 @@ class MultiColumnRenderChild extends MarkdownRenderChild {
 			el.innerHTML = '';
 			display.className = 'multi-column-display';
 
-			// Create column header with delete button (only show if more than 1 column)
-			if (this.config.columns > 1) {
-				const header = document.createElement('div');
-				header.className = 'multi-column-header';
+			// Create column header with controls (always show some controls)
+			const header = document.createElement('div');
+			header.className = 'multi-column-header';
 
-				const deleteBtn = document.createElement('button');
+			// Create button container for better layout
+			const buttonContainer = document.createElement('div');
+			buttonContainer.className = 'multi-column-button-container';
+
+			// Add column left button
+			const addLeftBtn = document.createElement('button');
+			addLeftBtn.textContent = '◀+';
+			addLeftBtn.className = 'multi-column-btn multi-column-add-btn';
+			addLeftBtn.title = `Add column to the left`;
+			addLeftBtn.onclick = (e) => {
+				e.preventDefault();
+				e.stopPropagation();
+				this.addColumnAt(idx, 'left');
+			};
+
+			// Delete button (only show if more than 1 column)
+			let deleteBtn: HTMLButtonElement | null = null;
+			if (this.config.columns > 1) {
+				deleteBtn = document.createElement('button');
 				deleteBtn.textContent = '×';
-				deleteBtn.className = 'multi-column-delete-btn';
+				deleteBtn.className = 'multi-column-btn multi-column-delete-btn';
 				deleteBtn.title = `Delete column ${idx + 1}`;
 				deleteBtn.onclick = (e) => {
 					e.preventDefault();
 					e.stopPropagation();
 					this.removeSpecificColumn(idx);
 				};
-
-				header.appendChild(deleteBtn);
-				el.appendChild(header);
 			}
+
+			// Add column right button
+			const addRightBtn = document.createElement('button');
+			addRightBtn.textContent = '+▶';
+			addRightBtn.className = 'multi-column-btn multi-column-add-btn';
+			addRightBtn.title = `Add column to the right`;
+			addRightBtn.onclick = (e) => {
+				e.preventDefault();
+				e.stopPropagation();
+				this.addColumnAt(idx, 'right');
+			};
+
+			// Append buttons in order: left, delete (if exists), right
+			buttonContainer.appendChild(addLeftBtn);
+			if (deleteBtn) {
+				buttonContainer.appendChild(deleteBtn);
+			}
+			buttonContainer.appendChild(addRightBtn);
+
+			header.appendChild(buttonContainer);
+			el.appendChild(header);
 
             // Render markdown content for nicer preview
 			let md = this.columnContents[idx] ?? '';
@@ -375,8 +295,9 @@ class MultiColumnRenderChild extends MarkdownRenderChild {
             el.appendChild(display);
 			el.classList.add('multi-column-clickable');
 			el.addEventListener('click', (e) => {
-				// Don't trigger edit if clicking on delete button
-				if ((e.target as HTMLElement).classList.contains('multi-column-delete-btn')) return;
+				// Don't trigger edit if clicking on control buttons
+				const target = e.target as HTMLElement;
+				if (target.classList.contains('multi-column-btn')) return;
 				e.preventDefault();
 				e.stopPropagation();
 				this.openEditorOverlay(idx, el);
@@ -512,6 +433,19 @@ class MultiColumnRenderChild extends MarkdownRenderChild {
 		this.config.columnWidths = new Array(this.config.columns).fill(newColumnWidth);
 
 		// Update the source file to persist changes
+		this.updateSourceInFile();
+	}
+
+	private addColumnAt(columnIndex: number, position: 'left' | 'right') {
+		const insertIndex = position === 'left' ? columnIndex : columnIndex + 1;
+
+		// Insert empty content at the specified position
+		this.columnContents.splice(insertIndex, 0, '');
+
+		// Calculate new equal column width
+		this.config.columns++;
+		const newColumnWidth = 100 / this.config.columns;
+		this.config.columnWidths = new Array(this.config.columns).fill(newColumnWidth);
 		this.updateSourceInFile();
 	}
 
