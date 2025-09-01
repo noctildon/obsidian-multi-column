@@ -32,8 +32,8 @@ export class MultiColumnProcessor {
 				if (key === 'columns' && value) {
 					config.columns = parseInt(value) || 2;
 				} else if (key === 'columnWidths' && value) {
-					// Parse column widths as comma-separated percentages
 					config.columnWidths = value.split(',').map(w => parseFloat(w.trim())).filter(w => !isNaN(w));
+					config.hasExplicitColumnWidths = true;
 				}
 			} else if (line.startsWith('===column===')) {
 				// Start of column content
@@ -377,7 +377,6 @@ class MultiColumnRenderChild extends MarkdownRenderChild {
 	private handleKeyDown = (e: KeyboardEvent) => {
 		if (e.key === 'Escape') {
 			e.preventDefault();
-            console.log("ESC handleKeyDown");
 			this.closeOverlay(false);
 		}
 	};
@@ -454,13 +453,9 @@ class MultiColumnRenderChild extends MarkdownRenderChild {
 
 		// Only save if widths are significantly different from equal distribution
 		const equalWidth = 100 / this.config.columns;
-		const hasCustomWidths = widths.some(w => Math.abs(w - equalWidth) > 1); // More than 1% difference
-
+		const hasCustomWidths = widths.some(w => Math.abs(w - equalWidth) > 1); // more than 1% difference
 		if (hasCustomWidths) {
 			this.config.columnWidths = widths;
-		} else {
-			// Remove custom widths if they're essentially equal
-			delete this.config.columnWidths;
 		}
 	}
 
