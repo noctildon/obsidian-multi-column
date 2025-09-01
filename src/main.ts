@@ -3,7 +3,6 @@ import {
 	Editor,
 	EventRef,
 	MarkdownView,
-	Notice,
 	Plugin,
 	PluginSettingTab,
 	Setting,
@@ -36,7 +35,7 @@ export default class MultiColumnPlugin extends Plugin {
 
 		this.processor = new MultiColumnProcessor(this);
 
-		// Register markdown code block processor for multi-column
+		// Register markdown codeblock processor for multi-column
 		this.registerMarkdownCodeBlockProcessor("multi-column", (source, el, ctx) => {
 			this.processor.processCodeBlock(source, el, ctx);
 		});
@@ -51,7 +50,6 @@ export default class MultiColumnPlugin extends Plugin {
 			},
 		});
 
-		// Add settings tab
 		this.addSettingTab(new MultiColumnSettingTab(this.app, this));
 	}
 
@@ -64,6 +62,7 @@ export default class MultiColumnPlugin extends Plugin {
 		this.processor?.cleanup();
 	}
 
+    // Generate new multi-column codeblock
 	private generateMultiColumnBlock(): string {
 		const settings = this.settingManager.getSettings();
 		const columns = settings.defaultColumns || 2;
@@ -72,7 +71,6 @@ export default class MultiColumnPlugin extends Plugin {
 		block += `columns: ${columns}\n`;
         block += `columnWidths: 50.0,50.0\n`;
 
-		// Add empty column placeholders
 		for (let i = 0; i < columns; i++) {
 			block += "===column===\n";
 			block += `Column ${i + 1} content here...\n`;

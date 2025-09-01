@@ -216,8 +216,8 @@ class MultiColumnRenderChild extends MarkdownRenderChild {
 		this.containerEl.appendChild(this.container);
 	}
 
+    // Load and render column contents
 	private loadColumnContents() {
-        // Load and render column contents
         const columns = this.container.querySelectorAll('.multi-column-item');
 
         columns.forEach((col, idx) => {
@@ -226,7 +226,6 @@ class MultiColumnRenderChild extends MarkdownRenderChild {
 			el.innerHTML = '';
 			display.className = 'multi-column-display';
 
-			// Create column header with controls (always show some controls)
 			const header = document.createElement('div');
 			header.className = 'multi-column-header';
 
@@ -239,26 +238,26 @@ class MultiColumnRenderChild extends MarkdownRenderChild {
 
 			// Add column left button
 			const addLeftBtn = document.createElement('button');
-			addLeftBtn.textContent = '◀+';
+			addLeftBtn.textContent = '◀';
 			addLeftBtn.className = 'multi-column-btn multi-column-add-btn';
 			addLeftBtn.title = `Add column to the left`;
 			this.applyButtonSizing(addLeftBtn, sizeScale);
 			addLeftBtn.onclick = (e) => {
 				e.preventDefault();
 				e.stopPropagation();
-				this.addColumnAt(idx, 'left');
+				this.addColumn(idx, 'left');
 			};
 
             // Add column right button
 			const addRightBtn = document.createElement('button');
-			addRightBtn.textContent = '+▶';
+			addRightBtn.textContent = '▶';
 			addRightBtn.className = 'multi-column-btn multi-column-add-btn';
 			addRightBtn.title = `Add column to the right`;
 			this.applyButtonSizing(addRightBtn, sizeScale);
 			addRightBtn.onclick = (e) => {
 				e.preventDefault();
 				e.stopPropagation();
-				this.addColumnAt(idx, 'right');
+				this.addColumn(idx, 'right');
 			};
 
 			// Delete button (only show if more than 1 column)
@@ -272,7 +271,7 @@ class MultiColumnRenderChild extends MarkdownRenderChild {
 				deleteBtn.onclick = (e) => {
 					e.preventDefault();
 					e.stopPropagation();
-					this.removeSpecificColumn(idx);
+					this.removeColumn(idx);
 				};
 			}
 
@@ -288,8 +287,6 @@ class MultiColumnRenderChild extends MarkdownRenderChild {
             // Render markdown content for nicer preview
 			let md = this.columnContents[idx] ?? '';
 			if (md.trim()) {
-				// Preserve multiple consecutive empty lines by replacing them with HTML breaks
-				// This prevents markdown renderer from collapsing them
                 md = md.replace(/\n/g, '<br>');
 				MarkdownRenderer.render(this.plugin.app, md, display, this.ctx.sourcePath, this.plugin);
 			} else {
@@ -310,9 +307,8 @@ class MultiColumnRenderChild extends MarkdownRenderChild {
 		});
 	}
 
+    // Popup overlay window for editing context in a column
 	private openEditorOverlay(index: number, columnEl: HTMLElement) {
-        // Popup overlay window for editing context in a column
-
 		// Avoid reopening if same index already open
 		if (this.currentEditIndex === index && this.overlayEl) return;
 		this.closeOverlay(false);
@@ -322,7 +318,6 @@ class MultiColumnRenderChild extends MarkdownRenderChild {
 		const rect = columnEl.getBoundingClientRect();
 		const overlay = document.createElement('div');
 		overlay.className = 'multi-column-editor-overlay';
-		// Keep dynamic positioning styles inline since they depend on column position
 		overlay.style.top = `${rect.top + window.scrollY}px`;
 		overlay.style.left = `${rect.left + window.scrollX}px`;
 		overlay.style.minWidth = `${Math.max(rect.width, 260)}px`;
@@ -372,7 +367,7 @@ class MultiColumnRenderChild extends MarkdownRenderChild {
 		// Focus editor
 		setTimeout(() => this.overlayEditor?.focus(), 5);
 
-		// Overlay editor close (click outside or Esc)
+		// Close overlay editor (click outside or Esc)
 		document.addEventListener('mousedown', this.handleOutsideClick, true);
 		document.addEventListener('keydown', this.handleKeyDown);
 
@@ -383,14 +378,14 @@ class MultiColumnRenderChild extends MarkdownRenderChild {
 		};
 	}
 
-	// Event handler: outside click should save and close overlay
+	// Outside click saves and closes overlay
 	private handleOutsideClick = (e: MouseEvent) => {
 		if (!this.overlayEl || !this.overlayEl.contains(e.target as Node)) {
 			this.closeOverlay(true);
 		}
 	};
 
-	// Event handler: Escape key cancels edit
+	// Escape key cancels edit
 	private handleKeyDown = (e: KeyboardEvent) => {
 		if (e.key === 'Escape') {
 			e.preventDefault();
@@ -413,45 +408,59 @@ class MultiColumnRenderChild extends MarkdownRenderChild {
 			this.updateSourceInFile();
 		}
 
-        // Destroy editor
 		this.overlayEditor?.destroy();
 		this.overlayEditor = null;
-
-		// Remove overlay from DOM
 		this.overlayEl.remove();
 		this.overlayEl = null;
 		this.currentEditIndex = null;
 	}
 
-	private removeSpecificColumn(columnIndex: number) {
+	private removeColumn(columnIndex: number) {
 		// Don't allow removing if only one column left
 		if (this.config.columns <= 1) return;
-
-		// Remove the column content from the array
 		this.columnContents.splice(columnIndex, 1);
-
-		// Update config
 		this.config.columns--;
 
 		// Calculate new equal column width
 		const newColumnWidth = 100 / this.config.columns;
 		this.config.columnWidths = new Array(this.config.columns).fill(newColumnWidth);
-
-		// Update the source file to persist changes
 		this.updateSourceInFile();
 	}
 
-	private addColumnAt(columnIndex: number, position: 'left' | 'right') {
+	private addColumn(columnIndex: number, position: 'left' | 'right') {
 		const insertIndex = position === 'left' ? columnIndex : columnIndex + 1;
 
 		// Insert empty content at the specified position
 		this.columnContents.splice(insertIndex, 0, '');
+		this.config.columns++;
 
 		// Calculate new equal column width
-		this.config.columns++;
 		const newColumnWidth = 100 / this.config.columns;
 		this.config.columnWidths = new Array(this.config.columns).fill(newColumnWidth);
 		this.updateSourceInFile();
+	}
+
+    // apply sizing setting to the buttons
+    private applyButtonSizing(button: HTMLButtonElement, sizeScale: number) {
+        const baseFontSize = 8;
+		const basePaddingVertical = 2;
+		const basePaddingHorizontal = 5;
+		const baseBorderRadius = 2;
+        const baseWidth = 20;
+        const baseHeight = 20;
+
+		const scaledFontSize = Math.round(baseFontSize * sizeScale);
+		const scaledPaddingV = Math.max(1, Math.round(basePaddingVertical * sizeScale));
+		const scaledPaddingH = Math.max(2, Math.round(basePaddingHorizontal * sizeScale));
+		const scaledBorderRadius = Math.max(1, Math.round(baseBorderRadius * sizeScale));
+        const scaledWidth = Math.round(baseWidth * sizeScale);
+        const scaledHeight = Math.round(baseHeight * sizeScale);
+
+		button.style.fontSize = `${scaledFontSize}px`;
+		button.style.padding = `${scaledPaddingV}px ${scaledPaddingH}px`;
+		button.style.borderRadius = `${scaledBorderRadius}px`;
+        button.style.width = `${scaledWidth}px`;
+        button.style.height = `${scaledHeight}px`;
 	}
 
 	private updateSourceInFile() {
@@ -514,28 +523,6 @@ class MultiColumnRenderChild extends MarkdownRenderChild {
 		if (hasCustomWidths) {
 			this.config.columnWidths = widths;
 		}
-	}
-
-	private applyButtonSizing(button: HTMLButtonElement, sizeScale: number) {
-		const baseFontSize = 8;
-		const basePaddingVertical = 2;
-		const basePaddingHorizontal = 5;
-		const baseBorderRadius = 2;
-        const baseWidth = 20;
-        const baseHeight = 20;
-
-		const scaledFontSize = Math.round(baseFontSize * sizeScale);
-		const scaledPaddingV = Math.max(1, Math.round(basePaddingVertical * sizeScale));
-		const scaledPaddingH = Math.max(2, Math.round(basePaddingHorizontal * sizeScale));
-		const scaledBorderRadius = Math.max(1, Math.round(baseBorderRadius * sizeScale));
-        const scaledWidth = Math.round(baseWidth * sizeScale);
-        const scaledHeight = Math.round(baseHeight * sizeScale);
-
-		button.style.fontSize = `${scaledFontSize}px`;
-		button.style.padding = `${scaledPaddingV}px ${scaledPaddingH}px`;
-		button.style.borderRadius = `${scaledBorderRadius}px`;
-        button.style.width = `${scaledWidth}px`;
-        button.style.height = `${scaledHeight}px`;
 	}
 
 	private updateCodeBlockInFile(newSource: string) {
