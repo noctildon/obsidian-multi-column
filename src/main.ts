@@ -41,7 +41,6 @@ export default class MultiColumnPlugin extends Plugin {
 			this.processor.processCodeBlock(source, el, ctx);
 		});
 
-		// Add ribbon icon for multi-column tools
 		const ribbonIconEl = this.addRibbonIcon(
 			"columns",
 			"Multi-Column Layout",
@@ -51,7 +50,6 @@ export default class MultiColumnPlugin extends Plugin {
 		);
 		ribbonIconEl.addClass("multi-column-ribbon-class");
 
-		// Command to insert multi-column block
 		this.addCommand({
 			id: "insert-multi-column-block",
 			name: "Insert Multi-Column Block",
@@ -62,7 +60,6 @@ export default class MultiColumnPlugin extends Plugin {
 			},
 		});
 
-		// Command to toggle interactive editing
 		this.addCommand({
 			id: "toggle-interactive-editing",
 			name: "Toggle Interactive Multi-Column Editing",
@@ -222,7 +219,6 @@ class MultiColumnSettingTab extends PluginSettingTab {
 	display(): void {
 		const { containerEl } = this;
 		containerEl.empty();
-
 		containerEl.createEl("h2", { text: "Multi-Column Layout Settings" });
 
 		new Setting(containerEl)

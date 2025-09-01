@@ -6,10 +6,7 @@ export class MultiColumnProcessor {
 	constructor(private plugin: MultiColumnPlugin) {}
 
 	processCodeBlock(source: string, el: HTMLElement, ctx: MarkdownPostProcessorContext) {
-		console.log('Processing code block with source:', source);
-
 		const { config, columnContents } = this.parseConfigAndContent(source);
-		console.log('Parsed config:', config, 'Column contents:', columnContents);
 
 		// Create a render child to manage the lifecycle and updates
 		const renderChild = new MultiColumnRenderChild(el, this.plugin, ctx, config, columnContents, source);
@@ -143,7 +140,8 @@ export class MultiColumnProcessor {
 		if (!contentWrapper) return;
 
 		const columns = contentWrapper.querySelectorAll('.multi-column-item');
-		// Create new column wrapper
+
+        // Create new column wrapper
 		const newColumn = document.createElement('div');
 		newColumn.className = 'multi-column-item';
 		newColumn.setAttribute('data-column', columns.length.toString());
@@ -255,13 +253,15 @@ class MultiColumnRenderChild extends MarkdownRenderChild {
 	}
 
 	private loadColumnContents() {
-		const wrappers = this.container.querySelectorAll('.multi-column-item');
-		wrappers.forEach((wrap, idx) => {
-			const el = wrap as HTMLElement;
-			el.innerHTML = '';
+		const columns = this.container.querySelectorAll('.multi-column-item');
+
+        columns.forEach((col, idx) => {
+			const el = col as HTMLElement;
 			const display = document.createElement('div');
+			el.innerHTML = '';
 			display.className = 'multi-column-display';
-			// Render markdown content for nicer preview
+
+            // Render markdown content for nicer preview
 			const md = (this.columnContents[idx] ?? '').trim();
 			if (md) {
 				MarkdownRenderer.renderMarkdown(md, display, this.ctx.sourcePath, this.plugin);
@@ -269,7 +269,8 @@ class MultiColumnRenderChild extends MarkdownRenderChild {
 				display.textContent = '(empty)';
 				display.style.opacity = '0.6';
 			}
-			el.appendChild(display);
+
+            el.appendChild(display);
 			el.classList.add('multi-column-clickable');
 			el.addEventListener('click', (e) => {
 				e.preventDefault();
@@ -349,7 +350,7 @@ class MultiColumnRenderChild extends MarkdownRenderChild {
 		});
 
 		// Focus editor
-		setTimeout(() => this.overlayEditor?.focus(), 0);
+		setTimeout(() => this.overlayEditor?.focus(), 5);
 
 		// Outside click handler – save on outside click
 		const outsideClick = (e: MouseEvent) => {

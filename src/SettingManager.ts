@@ -95,9 +95,7 @@ export class MySettingManager implements ISettingManager<Setting> {
 		// load the data, this can be null if the plugin is used for the first time
 		const loadedData = (await this.plugin.loadData()) as unknown | null;
 
-		console.log("loaded: ", loadedData);
-
-		// if the data is null, then we need to initialize the data
+        // if the data is null, then we need to initialize the data
 		if (!loadedData) {
 			this.setting.value = DEFAULT_SETTING;
 			this.isLoaded = true;
@@ -114,8 +112,6 @@ export class MySettingManager implements ISettingManager<Setting> {
 			this.setting.value = DEFAULT_SETTING;
 			return this.setting.value;
 		}
-
-		console.log("parsed loaded data successfully");
 
 		this.setting.value = result.data;
 		return this.setting.value;
