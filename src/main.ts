@@ -68,6 +68,7 @@ export default class MultiColumnPlugin extends Plugin {
 
 		let block = "```multi-column\n";
 		block += `columns: ${columns}\n`;
+        block += `columnWidths: 50.0,50.0\n`;
 
 		// Add empty column placeholders
 		for (let i = 0; i < columns; i++) {

@@ -49,7 +49,8 @@ This CSS file contains all the styles for the multi-column layout plugin.
 /* ===== CONTENT AND ITEM STYLES ===== */
 .multi-column-content {
 	display: flex;
-	gap: 20px;
+	gap: 0; /* Remove gap since we're using resizers */
+	align-items: stretch;
 }
 
 .multi-column-item {
@@ -63,6 +64,32 @@ This CSS file contains all the styles for the multi-column layout plugin.
 	transition: background-color 0.2s;
 	overflow: auto;
 	box-sizing: border-box;
+}
+
+/* ===== RESIZER STYLES ===== */
+.multi-column-resizer {
+	width: 4px;
+	background: var(--background-modifier-border);
+	cursor: col-resize;
+	flex-shrink: 0;
+	position: relative;
+	transition: background-color 0.2s;
+	opacity: 0.6;
+}
+
+.multi-column-resizer:hover {
+	background: var(--interactive-accent) !important;
+	opacity: 1;
+}
+
+.multi-column-resizer::before {
+	content: '';
+	position: absolute;
+	top: 0;
+	bottom: 0;
+	left: -4px;
+	right: -4px;
+	/* Expand clickable area */
 }
 
 .multi-column-item[contenteditable="true"] {

@@ -17,7 +17,8 @@ export class MultiColumnProcessor {
         // Parse the codeblock source into config and column contents
 		const lines = source.split('\n');
 		const config: any = {
-			columns: 2
+			columns: 2,
+            columnWidths: [50.0, 50.0]
 		};
 
 		const columnContents: string[] = [];
@@ -30,6 +31,9 @@ export class MultiColumnProcessor {
 				const [key, value] = line.split(':').map(s => s.trim());
 				if (key === 'columns' && value) {
 					config.columns = parseInt(value) || 2;
+				} else if (key === 'columnWidths' && value) {
+					// Parse column widths as comma-separated percentages
+					config.columnWidths = value.split(',').map(w => parseFloat(w.trim())).filter(w => !isNaN(w));
 				}
 			} else if (line.startsWith('===column===')) {
 				// Start of column content
@@ -77,15 +81,30 @@ export class MultiColumnProcessor {
 		const contentWrapper = document.createElement('div');
 		contentWrapper.className = 'multi-column-content';
 
-		// Columns placeholder wrappers (editor inserted later)
+		// Create columns with resizers between them
 		for (let i = 0; i < config.columns; i++) {
 			const column = document.createElement('div');
 			column.className = 'multi-column-item';
 			column.setAttribute('data-column', i.toString());
-			contentWrapper.appendChild(column);
-		}
 
-        // TODO: add the resizer to resize the columns
+			// Use saved column width if available, otherwise use equal distribution
+			let columnWidth: number;
+			if (config.columnWidths && config.columnWidths[i] !== undefined) {
+				columnWidth = config.columnWidths[i];
+			} else {
+				columnWidth = 100 / config.columns;
+			}
+
+			column.style.flexBasis = `${columnWidth}%`;
+			column.style.minWidth = '100px'; // minimum column width
+			contentWrapper.appendChild(column);
+
+			// Add resizer between columns (not after the last column)
+			if (i < config.columns - 1) {
+				const resizer = this.createColumnResizer(i);
+				contentWrapper.appendChild(resizer);
+			}
+		}
 
 		container.appendChild(contentWrapper);
 		return container;
@@ -110,6 +129,75 @@ export class MultiColumnProcessor {
 		controls.appendChild(removeBtn);
 
 		return controls;
+	}
+
+	private createColumnResizer(columnIndex: number): HTMLElement {
+		const resizer = document.createElement('div');
+		resizer.className = 'multi-column-resizer';
+		resizer.setAttribute('data-resizer-index', columnIndex.toString());
+
+		// Add resize functionality
+		resizer.addEventListener('mousedown', (e) => this.startResize(e, columnIndex));
+
+		return resizer;
+	}
+
+	private startResize(e: MouseEvent, resizerIndex: number) {
+		e.preventDefault();
+
+		const contentWrapper = (e.target as HTMLElement).parentElement;
+		if (!contentWrapper) return;
+
+		const columns = Array.from(contentWrapper.querySelectorAll('.multi-column-item')) as HTMLElement[];
+		const leftColumn = columns[resizerIndex];
+		const rightColumn = columns[resizerIndex + 1];
+
+		if (!leftColumn || !rightColumn) return;
+
+		const startX = e.clientX;
+		const containerRect = contentWrapper.getBoundingClientRect();
+		const totalWidth = containerRect.width;
+
+		// Get current flex-basis values or calculate from current widths
+		const leftRect = leftColumn.getBoundingClientRect();
+		const rightRect = rightColumn.getBoundingClientRect();
+		const currentLeftPercent = (leftRect.width / totalWidth) * 100;
+		const currentRightPercent = (rightRect.width / totalWidth) * 100;
+		const totalPercent = currentLeftPercent + currentRightPercent;
+
+		const minWidthPercent = (100 / totalWidth) * 100; // 100px minimum as percentage
+
+		const onMouseMove = (e: MouseEvent) => {
+			const deltaX = e.clientX - startX;
+			const deltaPercent = (deltaX / totalWidth) * 100;
+
+			let newLeftPercent = currentLeftPercent + deltaPercent;
+			let newRightPercent = currentRightPercent - deltaPercent;
+
+			// Enforce minimum widths
+			if (newLeftPercent < minWidthPercent) {
+				newLeftPercent = minWidthPercent;
+				newRightPercent = totalPercent - newLeftPercent;
+			} else if (newRightPercent < minWidthPercent) {
+				newRightPercent = minWidthPercent;
+				newLeftPercent = totalPercent - newRightPercent;
+			}
+
+			leftColumn.style.flexBasis = `${newLeftPercent}%`;
+			rightColumn.style.flexBasis = `${newRightPercent}%`;
+		};
+
+		const onMouseUp = () => {
+			document.removeEventListener('mousemove', onMouseMove);
+			document.removeEventListener('mouseup', onMouseUp);
+			document.body.style.cursor = '';
+			document.body.style.userSelect = '';
+		};
+
+		document.addEventListener('mousemove', onMouseMove);
+		document.addEventListener('mouseup', onMouseUp);
+		document.body.style.cursor = 'col-resize';
+		document.body.style.userSelect = 'none';
 	}
 
     private addColumn(container: HTMLElement) {
@@ -267,21 +355,20 @@ class MultiColumnRenderChild extends MarkdownRenderChild {
 		// Focus editor
 		setTimeout(() => this.overlayEditor?.focus(), 5);
 
-		// Remove event listeners on overlay close (click outside or Esc)
+		// Overlay editor close (click outside or Esc)
 		document.addEventListener('mousedown', this.handleOutsideClick, true);
-		document.addEventListener('keydown', this.handleKeyDown, { once: true });
+		document.addEventListener('keydown', this.handleKeyDown);
 
 		// Store cleanup references on element for safety
 		(overlay as any)._cleanup = () => {
 			document.removeEventListener('mousedown', this.handleOutsideClick, true);
-			document.removeEventListener('keydown', this.handleKeyDown as any);
+			document.removeEventListener('keydown', this.handleKeyDown);
 		};
 	}
 
 	// Event handler: outside click should save and close overlay
 	private handleOutsideClick = (e: MouseEvent) => {
 		if (!this.overlayEl || !this.overlayEl.contains(e.target as Node)) {
-			document.removeEventListener('mousedown', this.handleOutsideClick, true);
 			this.closeOverlay(true);
 		}
 	};
@@ -290,12 +377,20 @@ class MultiColumnRenderChild extends MarkdownRenderChild {
 	private handleKeyDown = (e: KeyboardEvent) => {
 		if (e.key === 'Escape') {
 			e.preventDefault();
+            console.log("ESC handleKeyDown");
 			this.closeOverlay(false);
 		}
 	};
 
 	private closeOverlay(commit: boolean) {
 		if (!this.overlayEl) return;
+
+		// Cleanup handlers first to prevent multiple calls
+		const cleanup = (this.overlayEl as any)._cleanup;
+		if (cleanup) {
+			cleanup();
+		}
+
 		if (commit && this.currentEditIndex != null) {
 			// Persist change then re-render code block by updating file
 			this.columnContents[this.currentEditIndex] = this.currentEditValue;
@@ -306,16 +401,24 @@ class MultiColumnRenderChild extends MarkdownRenderChild {
 		this.overlayEditor?.destroy();
 		this.overlayEditor = null;
 
-        // Cleanup handlers
-		const cleanup = (this.overlayEl as any)._cleanup;
-		if (cleanup) cleanup();
+		// Remove overlay from DOM
 		this.overlayEl.remove();
 		this.overlayEl = null;
 		this.currentEditIndex = null;
 	}
 
 	private updateSourceInFile() {
+		// Capture current column widths before saving
+		this.updateColumnWidthsInConfig();
+
 		let newSource = `columns: ${this.config.columns}\n`;
+
+		// Add column widths if they exist and are not equal distribution
+		if (this.config.columnWidths) {
+			const widthsString = this.config.columnWidths.map((w: number) => w.toFixed(1)).join(',');
+			newSource += `columnWidths: ${widthsString}\n`;
+		}
+
 		this.columnContents.forEach((content) => {
 			newSource += `===column===\n`;
 			if (content) {
@@ -325,6 +428,40 @@ class MultiColumnRenderChild extends MarkdownRenderChild {
 		});
 		newSource = newSource.replace(/\n$/, '');
 		this.updateCodeBlockInFile(newSource);
+	}
+
+	private updateColumnWidthsInConfig() {
+		if (!this.container) return;
+
+		const columns = this.container.querySelectorAll('.multi-column-item');
+		if (columns.length === 0) return;
+
+		// Calculate the total container width
+		const contentWrapper = this.container.querySelector('.multi-column-content');
+		if (!contentWrapper) return;
+
+		const containerWidth = (contentWrapper as HTMLElement).getBoundingClientRect().width;
+		if (containerWidth === 0) return;
+
+		// Read current column widths as percentages
+		const widths: number[] = [];
+		columns.forEach((column) => {
+			const columnEl = column as HTMLElement;
+			const columnWidth = columnEl.getBoundingClientRect().width;
+			const percentage = (columnWidth / containerWidth) * 100;
+			widths.push(Math.round(percentage * 10) / 10); // Round to 1 decimal place
+		});
+
+		// Only save if widths are significantly different from equal distribution
+		const equalWidth = 100 / this.config.columns;
+		const hasCustomWidths = widths.some(w => Math.abs(w - equalWidth) > 1); // More than 1% difference
+
+		if (hasCustomWidths) {
+			this.config.columnWidths = widths;
+		} else {
+			// Remove custom widths if they're essentially equal
+			delete this.config.columnWidths;
+		}
 	}
 
 	private updateCodeBlockInFile(newSource: string) {
