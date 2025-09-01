@@ -56,7 +56,7 @@ export class MultiColumnProcessor {
 			}
 		});
 
-		// Ensure we have enough empty columns
+		// Ensure enough of empty columns
 		while (columnContents.length < config.columns) {
 			columnContents.push('');
 		}
@@ -64,7 +64,7 @@ export class MultiColumnProcessor {
 		return { config, columnContents };
 	}
 
-	createMultiColumnContainer(config: any): HTMLElement {
+	createMultiColumnContainer(config: any, onResizeComplete?: () => void): HTMLElement {
 		const container = document.createElement('div');
 		container.className = 'multi-column-container';
 
@@ -77,7 +77,6 @@ export class MultiColumnProcessor {
         const editControls = this.createEditControls(container, config);
         container.appendChild(editControls);
 
-		// Create content wrapper for horizontal columns
 		const contentWrapper = document.createElement('div');
 		contentWrapper.className = 'multi-column-content';
 
@@ -99,9 +98,9 @@ export class MultiColumnProcessor {
 			column.style.minWidth = '100px'; // minimum column width
 			contentWrapper.appendChild(column);
 
-			// Add resizer between columns (not after the last column)
+			// Add resizer between columns
 			if (i < config.columns - 1) {
-				const resizer = this.createColumnResizer(i);
+				const resizer = this.createColumnResizer(i, onResizeComplete);
 				contentWrapper.appendChild(resizer);
 			}
 		}
@@ -131,18 +130,15 @@ export class MultiColumnProcessor {
 		return controls;
 	}
 
-	private createColumnResizer(columnIndex: number): HTMLElement {
+	private createColumnResizer(columnIndex: number, onResizeComplete?: () => void): HTMLElement {
 		const resizer = document.createElement('div');
 		resizer.className = 'multi-column-resizer';
 		resizer.setAttribute('data-resizer-index', columnIndex.toString());
-
-		// Add resize functionality
-		resizer.addEventListener('mousedown', (e) => this.startResize(e, columnIndex));
-
+		resizer.addEventListener('mousedown', (e) => this.startResize(e, columnIndex, onResizeComplete));
 		return resizer;
 	}
 
-	private startResize(e: MouseEvent, resizerIndex: number) {
+	private startResize(e: MouseEvent, resizerIndex: number, onResizeComplete?: () => void) {
 		e.preventDefault();
 
 		const contentWrapper = (e.target as HTMLElement).parentElement;
@@ -192,6 +188,11 @@ export class MultiColumnProcessor {
 			document.removeEventListener('mouseup', onMouseUp);
 			document.body.style.cursor = '';
 			document.body.style.userSelect = '';
+
+			// Save the new column widths after resizing is complete
+			if (onResizeComplete) {
+				onResizeComplete();
+			}
 		};
 
 		document.addEventListener('mousemove', onMouseMove);
@@ -239,13 +240,12 @@ class MultiColumnRenderChild extends MarkdownRenderChild {
 	private render() {
 		this.containerEl.empty();
 
-		// Create the multi-column container using the processor's methods
 		const processor = new MultiColumnProcessor(this.plugin);
-		this.container = processor.createMultiColumnContainer(this.config);
-
-		// Load existing content into columns
+		this.container = processor.createMultiColumnContainer(this.config, () => {
+            this.updateColumnWidthsInConfig();
+            this.updateSourceInFile();
+        });
 		this.loadColumnContents();
-
 		this.containerEl.appendChild(this.container);
 	}
 
@@ -469,10 +469,10 @@ class MultiColumnRenderChild extends MarkdownRenderChild {
 		// Create the new block content
 		const newBlock = `\`\`\`multi-column\n${newSource}\n\`\`\``;
 
-		// Find the original code block more reliably by looking for the exact original source
+		// Find the original codeblock more reliably by looking for the exact original source
 		const originalBlock = `\`\`\`multi-column\n${this.originalSource}\n\`\`\``;
 
-		// Only update if we find the exact original block
+		// Only update if find the exact original block
 		const blockIndex = content.indexOf(originalBlock);
 		if (blockIndex !== -1) {
 			// Use a small delay to avoid conflicts with live preview
