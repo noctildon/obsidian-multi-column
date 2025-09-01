@@ -98,24 +98,6 @@ This CSS file contains all the styles for the multi-column layout plugin.
 	margin-bottom: 0;
 }
 
-/* ===== RESIZER STYLES ===== */
-.multi-column-resizer {
-	width: 4px;
-	cursor: col-resize;
-	background: var(--interactive-accent);
-	margin: 0 2px;
-	opacity: 0;
-	transition: opacity 0.2s;
-	border-radius: 2px;
-}
-
-.multi-column-content:hover .multi-column-resizer {
-	opacity: 0.5;
-}
-
-.multi-column-resizer:hover {
-	opacity: 1 !important;
-}
 
 /* ===== EDITOR OVERLAY STYLES ===== */
 .multi-column-editor-overlay {

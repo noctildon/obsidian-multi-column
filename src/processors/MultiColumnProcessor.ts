@@ -14,6 +14,7 @@ export class MultiColumnProcessor {
 	}
 
 	private parseConfigAndContent(source: string): { config: any; columnContents: string[] } {
+        // Parse the codeblock source into config and column contents
 		const lines = source.split('\n');
 		const config: any = {
 			columns: 2
@@ -23,7 +24,7 @@ export class MultiColumnProcessor {
 		let currentColumn = -1;
 		let inColumnSection = false;
 
-		for (const line of lines) {
+        for (const line of lines) {
 			if (line.includes(':') && !inColumnSection) {
 				// Parse config
 				const [key, value] = line.split(':').map(s => s.trim());
@@ -34,7 +35,6 @@ export class MultiColumnProcessor {
 				// Start of column content
 				inColumnSection = true;
 				currentColumn++;
-				columnContents[currentColumn] = '';
 			} else if (inColumnSection) {
 				// Column content
 				if (columnContents[currentColumn] === undefined) {
@@ -83,13 +83,9 @@ export class MultiColumnProcessor {
 			column.className = 'multi-column-item';
 			column.setAttribute('data-column', i.toString());
 			contentWrapper.appendChild(column);
-			if (i < config.columns - 1) {
-				const resizer = document.createElement('div');
-				resizer.className = 'multi-column-resizer';
-				this.attachResizerEvents(resizer);
-				contentWrapper.appendChild(resizer);
-			}
 		}
+
+        // TODO: add the resizer to resize the columns
 
 		container.appendChild(contentWrapper);
 		return container;
@@ -103,7 +99,6 @@ export class MultiColumnProcessor {
 		const addBtn = document.createElement('button');
 		addBtn.textContent = '+';
 		addBtn.title = 'Add column';
-		addBtn.onclick = () => this.addColumn(container);
 
 		// Remove column button
 		const removeBtn = document.createElement('button');
@@ -117,79 +112,13 @@ export class MultiColumnProcessor {
 		return controls;
 	}
 
-	private addColumn(container: HTMLElement) {
-		const contentWrapper = container.querySelector('.multi-column-content') as HTMLElement;
-		if (!contentWrapper) return;
+    private addColumn(container: HTMLElement) {
+        // TODO: Implement column addition logic
+    }
 
-		const columns = contentWrapper.querySelectorAll('.multi-column-item');
-		// Create new column wrapper
-		const newColumn = document.createElement('div');
-		newColumn.className = 'multi-column-item';
-		newColumn.setAttribute('data-column', columns.length.toString());
-		if (columns.length > 0) {
-			const resizer = document.createElement('div');
-			resizer.className = 'multi-column-resizer';
-			this.attachResizerEvents(resizer);
-			contentWrapper.appendChild(resizer);
-		}
-		contentWrapper.appendChild(newColumn);
-	}
-
-	private removeColumn(container: HTMLElement) {
-		const contentWrapper = container.querySelector('.multi-column-content') as HTMLElement;
-		if (!contentWrapper) return;
-
-		const columns = contentWrapper.querySelectorAll('.multi-column-item');
-		const resizers = contentWrapper.querySelectorAll('.multi-column-resizer');
-
-		if (columns.length > 1) {
-			// Remove last column and its resizer
-			const lastColumn = columns[columns.length - 1] as HTMLElement;
-			const lastResizer = resizers[resizers.length - 1] as HTMLElement;
-
-			if (lastColumn) {
-				lastColumn.remove();
-			}
-			if (lastResizer) {
-				lastResizer.remove();
-			}
-		}
-	}
-
-	attachResizerEvents(resizer: HTMLElement) {
-		let isResizing = false;
-		let startX: number;
-		let startWidth: number;
-
-		resizer.addEventListener('mousedown', (e) => {
-			isResizing = true;
-			startX = e.clientX;
-
-			const prevColumn = resizer.previousElementSibling as HTMLElement;
-			startWidth = prevColumn.offsetWidth;
-
-			document.addEventListener('mousemove', handleMouseMove);
-			document.addEventListener('mouseup', handleMouseUp);
-		});
-
-		const handleMouseMove = (e: MouseEvent) => {
-			if (!isResizing) return;
-
-			const deltaX = e.clientX - startX;
-			const prevColumn = resizer.previousElementSibling as HTMLElement;
-			const newWidth = startWidth + deltaX;
-
-			if (newWidth > 50) { // Minimum column width
-				prevColumn.style.width = newWidth + 'px';
-			}
-		};
-
-		const handleMouseUp = () => {
-			isResizing = false;
-			document.removeEventListener('mousemove', handleMouseMove);
-			document.removeEventListener('mouseup', handleMouseUp);
-		};
-	}
+    private removeColumn(container: HTMLElement) {
+        // TODO: Implement column removal logic
+    }
 
 	cleanup() {
 		// Clean up any event listeners or resources
@@ -322,29 +251,32 @@ class MultiColumnRenderChild extends MarkdownRenderChild {
 		// Focus editor
 		setTimeout(() => this.overlayEditor?.focus(), 5);
 
-		// Outside click handler – save on outside click
-		const outsideClick = (e: MouseEvent) => {
-			if (!overlay.contains(e.target as Node)) {
-				document.removeEventListener('mousedown', outsideClick, true);
-				this.closeOverlay(true);
-			}
-		};
-		document.addEventListener('mousedown', outsideClick, true);
-
-		// Escape key to cancel
-		const keyHandler = (e: KeyboardEvent) => {
-			if (e.key === 'Escape') {
-				e.preventDefault();
-				this.closeOverlay(false);
-			}
-		};
-		document.addEventListener('keydown', keyHandler, { once: true });
+		// Remove event listeners on overlay close (click outside or Esc)
+		document.addEventListener('mousedown', this.handleOutsideClick, true);
+		document.addEventListener('keydown', this.handleKeyDown, { once: true });
 
 		// Store cleanup references on element for safety
 		(overlay as any)._cleanup = () => {
-			document.removeEventListener('mousedown', outsideClick, true);
+			document.removeEventListener('mousedown', this.handleOutsideClick, true);
+			document.removeEventListener('keydown', this.handleKeyDown as any);
 		};
 	}
+
+	// Event handler: outside click should save and close overlay
+	private handleOutsideClick = (e: MouseEvent) => {
+		if (!this.overlayEl || !this.overlayEl.contains(e.target as Node)) {
+			document.removeEventListener('mousedown', this.handleOutsideClick, true);
+			this.closeOverlay(true);
+		}
+	};
+
+	// Event handler: Escape key cancels edit
+	private handleKeyDown = (e: KeyboardEvent) => {
+		if (e.key === 'Escape') {
+			e.preventDefault();
+			this.closeOverlay(false);
+		}
+	};
 
 	private closeOverlay(commit: boolean) {
 		if (!this.overlayEl) return;
