@@ -135,7 +135,6 @@ export class MySettingManager implements ISettingManager<Setting> {
 			}
 
 			this.isLoaded = true;
-			console.log("parsed loaded data successfully");
 		}
 		await this.plugin.saveData(this.setting.value);
 	}

@@ -140,8 +140,7 @@ export class MultiColumnProcessor {
 		if (!contentWrapper) return;
 
 		const columns = contentWrapper.querySelectorAll('.multi-column-item');
-
-        // Create new column wrapper
+		// Create new column wrapper
 		const newColumn = document.createElement('div');
 		newColumn.className = 'multi-column-item';
 		newColumn.setAttribute('data-column', columns.length.toString());
@@ -264,7 +263,7 @@ class MultiColumnRenderChild extends MarkdownRenderChild {
             // Render markdown content for nicer preview
 			const md = (this.columnContents[idx] ?? '').trim();
 			if (md) {
-				MarkdownRenderer.renderMarkdown(md, display, this.ctx.sourcePath, this.plugin);
+				MarkdownRenderer.render(this.plugin.app, md, display, this.ctx.sourcePath, this.plugin);
 			} else {
 				display.textContent = '(empty)';
 				display.style.opacity = '0.6';
