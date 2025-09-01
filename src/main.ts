@@ -16,11 +16,13 @@ import { MultiColumnProcessor } from "./processors/MultiColumnProcessor";
 interface MultiColumnSettings {
 	defaultColumns: number;
 	showColumnBorders: boolean;
+	buttonSize: number; // 0.5 to 2.0 scale factor
 }
 
 const DEFAULT_SETTINGS: MultiColumnSettings = {
 	defaultColumns: 2,
 	showColumnBorders: false,
+	buttonSize: 1.0, // 1.0 = normal size
 };
 
 export default class MultiColumnPlugin extends Plugin {
@@ -118,6 +120,21 @@ class MultiColumnSettingTab extends PluginSettingTab {
 					.onChange(async (value) => {
 						this.plugin.settingManager.updateSettings((setting) => {
 							setting.value.showColumnBorders = value;
+						});
+					})
+			);
+
+		new Setting(containerEl)
+			.setName("Button Size")
+			.setDesc("Control the size of column add/delete buttons (0.5 = very small, 1.0 = normal, 2.0 = very large)")
+			.addSlider((slider) =>
+				slider
+					.setLimits(0.5, 2.0, 0.1)
+					.setValue(this.plugin.settingManager.getSettings().buttonSize)
+					.setDynamicTooltip()
+					.onChange(async (value: number) => {
+						this.plugin.settingManager.updateSettings((setting) => {
+							setting.value.buttonSize = value;
 						});
 					})
 			);

@@ -234,11 +234,15 @@ class MultiColumnRenderChild extends MarkdownRenderChild {
 			const buttonContainer = document.createElement('div');
 			buttonContainer.className = 'multi-column-button-container';
 
+			const settings = this.plugin.settingManager.getSettings();
+			const sizeScale = settings.buttonSize;
+
 			// Add column left button
 			const addLeftBtn = document.createElement('button');
-			addLeftBtn.textContent = '◀';
+			addLeftBtn.textContent = '◀+';
 			addLeftBtn.className = 'multi-column-btn multi-column-add-btn';
 			addLeftBtn.title = `Add column to the left`;
+			this.applyButtonSizing(addLeftBtn, sizeScale);
 			addLeftBtn.onclick = (e) => {
 				e.preventDefault();
 				e.stopPropagation();
@@ -247,9 +251,10 @@ class MultiColumnRenderChild extends MarkdownRenderChild {
 
             // Add column right button
 			const addRightBtn = document.createElement('button');
-			addRightBtn.textContent = '▶';
+			addRightBtn.textContent = '+▶';
 			addRightBtn.className = 'multi-column-btn multi-column-add-btn';
 			addRightBtn.title = `Add column to the right`;
+			this.applyButtonSizing(addRightBtn, sizeScale);
 			addRightBtn.onclick = (e) => {
 				e.preventDefault();
 				e.stopPropagation();
@@ -263,6 +268,7 @@ class MultiColumnRenderChild extends MarkdownRenderChild {
 				deleteBtn.textContent = '×';
 				deleteBtn.className = 'multi-column-btn multi-column-delete-btn';
 				deleteBtn.title = `Delete column ${idx + 1}`;
+				this.applyButtonSizing(deleteBtn, sizeScale);
 				deleteBtn.onclick = (e) => {
 					e.preventDefault();
 					e.stopPropagation();
@@ -508,6 +514,28 @@ class MultiColumnRenderChild extends MarkdownRenderChild {
 		if (hasCustomWidths) {
 			this.config.columnWidths = widths;
 		}
+	}
+
+	private applyButtonSizing(button: HTMLButtonElement, sizeScale: number) {
+		const baseFontSize = 8;
+		const basePaddingVertical = 2;
+		const basePaddingHorizontal = 5;
+		const baseBorderRadius = 2;
+        const baseWidth = 20;
+        const baseHeight = 20;
+
+		const scaledFontSize = Math.round(baseFontSize * sizeScale);
+		const scaledPaddingV = Math.max(1, Math.round(basePaddingVertical * sizeScale));
+		const scaledPaddingH = Math.max(2, Math.round(basePaddingHorizontal * sizeScale));
+		const scaledBorderRadius = Math.max(1, Math.round(baseBorderRadius * sizeScale));
+        const scaledWidth = Math.round(baseWidth * sizeScale);
+        const scaledHeight = Math.round(baseHeight * sizeScale);
+
+		button.style.fontSize = `${scaledFontSize}px`;
+		button.style.padding = `${scaledPaddingV}px ${scaledPaddingH}px`;
+		button.style.borderRadius = `${scaledBorderRadius}px`;
+        button.style.width = `${scaledWidth}px`;
+        button.style.height = `${scaledHeight}px`;
 	}
 
 	private updateCodeBlockInFile(newSource: string) {

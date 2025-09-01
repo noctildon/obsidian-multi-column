@@ -225,14 +225,11 @@ This CSS file contains all the styles for the multi-column layout plugin.
 	border: 1px solid var(--background-modifier-border);
 	background: var(--background-secondary);
 	color: var(--text-normal);
-	font-size: 9px;
-	line-height: 1.1;
-	padding: 2px 5px;
-	border-radius: 2px;
 	cursor: pointer;
 	user-select: none;
 	transition: background-color .12s ease, border-color .12s ease, color .12s ease, transform .08s ease;
 	font-weight: 500;
+    text-align: center;
 }
 
 .multi-column-btn:focus-visible {
@@ -274,13 +271,6 @@ This CSS file contains all the styles for the multi-column layout plugin.
 	background: var(--background-modifier-error-hover) !important;
 	border-color: var(--background-modifier-error-hover) !important;
 	color: var(--text-on-accent) !important;
-}
-
-.multi-column-add-btn, .multi-column-delete-btn {
-	min-width: 26px; /* compact footprint */
-	text-align: center;
-	padding-left: 4px; /* keep symbols centered */
-	padding-right: 4px;
 }
 
 
