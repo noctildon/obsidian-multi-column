@@ -189,6 +189,9 @@ class MultiColumnRenderChild extends MarkdownRenderChild {
 	private overlayEditor: ColumnEditor | null = null;
 	private currentEditIndex: number | null = null;
 	private currentEditValue: string = '';
+	// Drag and drop state
+	private draggedColumnIndex: number | null = null;
+	private dropTargetIndex: number | null = null;
 
 	constructor(
 		containerEl: HTMLElement,
@@ -225,6 +228,18 @@ class MultiColumnRenderChild extends MarkdownRenderChild {
 			const display = document.createElement('div');
 			el.innerHTML = '';
 			display.className = 'multi-column-display';
+
+			// Make column draggable for reordering
+			el.draggable = true;
+			el.setAttribute('data-column-index', idx.toString());
+
+			// Add drag event listeners
+			el.addEventListener('dragstart', (e) => this.handleDragStart(e, idx));
+			el.addEventListener('dragover', (e) => this.handleDragOver(e, idx));
+			el.addEventListener('dragenter', (e) => this.handleDragEnter(e, idx));
+			el.addEventListener('dragleave', (e) => this.handleDragLeave(e, idx));
+			el.addEventListener('drop', (e) => this.handleDrop(e, idx));
+			el.addEventListener('dragend', (e) => this.handleDragEnd(e));
 
 			const header = document.createElement('div');
 			header.className = 'multi-column-header';
@@ -465,6 +480,116 @@ class MultiColumnRenderChild extends MarkdownRenderChild {
 		button.style.borderRadius = `${scaledBorderRadius}px`;
         button.style.width = `${scaledWidth}px`;
         button.style.height = `${scaledHeight}px`;
+	}
+
+	// Drag and drop event handlers for column reordering
+	private handleDragStart(e: DragEvent, columnIndex: number) {
+        console.log("handleDragStart");
+		this.draggedColumnIndex = columnIndex;
+
+		// Set drag data
+		if (e.dataTransfer) {
+			e.dataTransfer.effectAllowed = 'move';
+			e.dataTransfer.setData('text/plain', columnIndex.toString());
+		}
+
+		// Add visual feedback
+		const columnEl = e.target as HTMLElement;
+		columnEl.classList.add('multi-column-dragging');
+
+		// Prevent opening editor during drag
+		e.stopPropagation();
+	}
+
+	private handleDragOver(e: DragEvent, columnIndex: number) {
+		console.log("handleDragOver");
+		e.preventDefault();
+		if (e.dataTransfer) {
+			e.dataTransfer.dropEffect = 'move';
+		}
+	}
+
+	private handleDragEnter(e: DragEvent, columnIndex: number) {
+        console.log("handleDragEnter");
+		e.preventDefault();
+
+		// Don't highlight the dragged column itself
+		if (this.draggedColumnIndex === columnIndex) return;
+
+		// Add drop target highlight
+		const columnEl = e.currentTarget as HTMLElement;
+		columnEl.classList.add('multi-column-drop-target');
+		this.dropTargetIndex = columnIndex;
+	}
+
+	private handleDragLeave(e: DragEvent, columnIndex: number) {
+        console.log("handleDragLeave");
+		// Only remove highlight if we're actually leaving this element
+		// (not just moving to a child element)
+		const columnEl = e.currentTarget as HTMLElement;
+		if (!columnEl.contains(e.relatedTarget as Node)) {
+			columnEl.classList.remove('multi-column-drop-target');
+			if (this.dropTargetIndex === columnIndex) {
+				this.dropTargetIndex = null;
+			}
+		}
+	}
+
+	private handleDrop(e: DragEvent, dropIndex: number) {
+        console.log("handleDrop");
+		e.preventDefault();
+		e.stopPropagation();
+
+		const columnEl = e.currentTarget as HTMLElement;
+		columnEl.classList.remove('multi-column-drop-target');
+
+		// Don't do anything if dropping on the same column
+		if (this.draggedColumnIndex === null || this.draggedColumnIndex === dropIndex) {
+			return;
+		}
+
+		// Perform the reorder
+		this.reorderColumn(this.draggedColumnIndex, dropIndex);
+	}
+
+    private reorderColumn(fromIndex: number, toIndex: number) {
+		// Move the column content
+		const movedContent = this.columnContents[fromIndex] || '';
+		this.columnContents.splice(fromIndex, 1);
+		this.columnContents.splice(toIndex, 0, movedContent);
+
+		// If we have explicit column widths, reorder them too
+		if (this.config.columnWidths && this.config.columnWidths.length > Math.max(fromIndex, toIndex)) {
+			const movedWidth = this.config.columnWidths[fromIndex];
+			this.config.columnWidths.splice(fromIndex, 1);
+			this.config.columnWidths.splice(toIndex, 0, movedWidth);
+		}
+
+		// Update the source file, which will trigger a re-render
+		this.updateSourceInFile();
+	}
+
+	private handleDragEnd(e: DragEvent) {
+		// Clean up drag state and visual feedback
+		const columnEl = e.target as HTMLElement;
+		columnEl.classList.remove('multi-column-dragging');
+
+		// Remove all drop target highlights
+		const allColumns = this.container.querySelectorAll('.multi-column-item');
+		allColumns.forEach(col => {
+			col.classList.remove('multi-column-drop-target');
+		});
+
+		// Reset drag state
+		this.draggedColumnIndex = null;
+		this.dropTargetIndex = null;
+
+		// Force re-render to ensure the codeblock is properly displayed
+		// This is necessary because drag operations can interfere with the rendering
+		setTimeout(() => {
+			this.render();
+            console.log("Re-rendered after drag end");
+		}, 50);
 	}
 
 	private updateSourceInFile() {
