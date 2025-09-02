@@ -1,24 +1,37 @@
-## Obsidian Sample Plugin (Yomaru)
+# Obsidian Multi-column
 
-- ✅ husky
-- ✅ bun
-- ✅ bun github release workflow
-- ✅ extended obsidian typescript api
+A Obsidian plugin that adds multi-column layout support for note content. It provides a Markdown post-processor and a column editor so you can split content into responsive columns.
 
-## How to start?
+## Installation
 
-you can click the "use this template" button on Github. Or clone it yourself:
+- write some instructions
 
-1. git clone this project
-2. remove the remote origin: `git remote remove origin`
-3. remove the tag : `git tag -d <tag_name>`
 
-Then change the basic info in your plugin. Open your vault and you should see the info has been updated.
+## Usage
+- Use the command palette (CMD/CTRL+P) and search for the plugin commands `Insert Multi-Column Block` to initialize a multi-column block
 
-### Prerequisite
 
-you need to install `bun` in your system to use this template.
+## Features
 
-## How to release?
+- Create and edit column content
+![Create and edit](assets/create_edit.gif)
 
-run `bun release`
+
+- Resize columns width
+![Resize columns](assets/resize.gif)
+
+
+- Add/Remove columns
+![Add and remove columns](assets/add_remove_columns.gif)
+
+
+- Reorder columns by drag & drop
+![Reorder columns](assets/reorder.gif)
+
+
+- Wikilink and internal link
+![Wikilink behaviour](assets/wikilink.gif)
+
+
+- Embedded note/image
+![Embedded columns](assets/embedded.gif)
