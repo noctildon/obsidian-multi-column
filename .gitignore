@@ -3,6 +3,7 @@
 
 package-lock.json
 bun.lockb
+bun.lock
 
 # npm
 node_modules
