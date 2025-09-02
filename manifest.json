@@ -1,14 +1,10 @@
 {
-	"id": "sample-plugin",
-	"name": "Sample Plugin",
-	"version": "1.0.0",
-	"minAppVersion": "0.15.0",
-	"description": "This is a sample plugin for Obsidian. This plugin demonstrates some of the capabilities of the Obsidian API.",
-	"author": "HananoshikaYomaru",
-	"authorUrl": "https://yomaru.dev",
-	"fundingUrl": {
-		"buymeacoffee": "https://www.buymeacoffee.com/yomaru",
-		"Github Sponsor": "https://github.com/sponsors/HananoshikaYomaru"
-	},
+	"id": "multi-column",
+	"name": "Multi-column Plugin",
+	"version": "0.0.1",
+	"minAppVersion": "1.8.10",
+	"description": "This plugin allows you to create multi-column layouts in your notes.",
+	"author": "noctildon",
+	"authorUrl": "https://noctildon.github.io/",
 	"isDesktopOnly": false
 }
