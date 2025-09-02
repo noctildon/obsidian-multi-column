@@ -28,8 +28,6 @@ export default class MultiColumnPlugin extends Plugin {
 	settingManager: MySettingManager;
 	private eventRefs: EventRef[] = [];
 	private processor: MultiColumnProcessor;
-	// Interval id used to log cursor position every second while the plugin is loaded
-	private cursorLoggerInterval: number | null = null;
 
 	async onload() {
 		this.settingManager = new MySettingManager(this);
@@ -53,18 +51,6 @@ export default class MultiColumnPlugin extends Plugin {
 		});
 
 		this.addSettingTab(new MultiColumnSettingTab(this.app, this));
-
-        // DEBUG: Log cursor position
-		// Start logging the cursor position every 1 second while the plugin is active
-		this.cursorLoggerInterval = window.setInterval(() => {
-			const view = this.app.workspace.getActiveViewOfType(MarkdownView);
-			if (view) {
-				const cursor = view.editor.getCursor();
-				// console.log(`Cursor position: line=${cursor.line}, ch=${cursor.ch}`);
-			} else {
-				// console.log("No active Markdown view");
-			}
-		}, 1000);
 	}
 
 	onunload() {

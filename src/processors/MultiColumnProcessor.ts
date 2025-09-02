@@ -482,18 +482,13 @@ class MultiColumnRenderChild extends MarkdownRenderChild {
         button.style.height = `${scaledHeight}px`;
 	}
 
-	// Drag and drop event handlers for column reordering
-	private handleDragStart(e: DragEvent, columnIndex: number) {
-        console.log("handleDragStart");
+    private handleDragStart(e: DragEvent, columnIndex: number) {
 		this.draggedColumnIndex = columnIndex;
-
-		// Set drag data
 		if (e.dataTransfer) {
 			e.dataTransfer.effectAllowed = 'move';
 			e.dataTransfer.setData('text/plain', columnIndex.toString());
 		}
 
-		// Add visual feedback
 		const columnEl = e.target as HTMLElement;
 		columnEl.classList.add('multi-column-dragging');
 
@@ -502,7 +497,6 @@ class MultiColumnRenderChild extends MarkdownRenderChild {
 	}
 
 	private handleDragOver(e: DragEvent, columnIndex: number) {
-		console.log("handleDragOver");
 		e.preventDefault();
 		if (e.dataTransfer) {
 			e.dataTransfer.dropEffect = 'move';
@@ -510,7 +504,6 @@ class MultiColumnRenderChild extends MarkdownRenderChild {
 	}
 
 	private handleDragEnter(e: DragEvent, columnIndex: number) {
-        console.log("handleDragEnter");
 		e.preventDefault();
 
 		// Don't highlight the dragged column itself
@@ -523,7 +516,6 @@ class MultiColumnRenderChild extends MarkdownRenderChild {
 	}
 
 	private handleDragLeave(e: DragEvent, columnIndex: number) {
-        console.log("handleDragLeave");
 		// Only remove highlight if we're actually leaving this element
 		// (not just moving to a child element)
 		const columnEl = e.currentTarget as HTMLElement;
@@ -536,7 +528,6 @@ class MultiColumnRenderChild extends MarkdownRenderChild {
 	}
 
 	private handleDrop(e: DragEvent, dropIndex: number) {
-        console.log("handleDrop");
 		e.preventDefault();
 		e.stopPropagation();
 
@@ -548,7 +539,6 @@ class MultiColumnRenderChild extends MarkdownRenderChild {
 			return;
 		}
 
-		// Perform the reorder
 		this.reorderColumn(this.draggedColumnIndex, dropIndex);
 	}
 
@@ -584,11 +574,9 @@ class MultiColumnRenderChild extends MarkdownRenderChild {
 		this.draggedColumnIndex = null;
 		this.dropTargetIndex = null;
 
-		// Force re-render to ensure the codeblock is properly displayed
-		// This is necessary because drag operations can interfere with the rendering
+		// BUG: the re-rendering is not working
 		setTimeout(() => {
 			this.render();
-            console.log("Re-rendered after drag end");
 		}, 50);
 	}
 
