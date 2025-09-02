@@ -1,33 +1,37 @@
-name: Release Obsidian plugin
+name: Release
 
 on:
-    push:
-        tags:
-            - "*"
+  push:
+    tags:
+      - 'v*'
 
 jobs:
-    build:
-        runs-on: ubuntu-latest
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-        steps:
-            - uses: actions/checkout@v3
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
 
-            - uses: oven-sh/setup-bun@v1
-              with:
-                  bun-version: latest
+      - name: Install dependencies
+        run: npm ci
 
-            - name: Build plugin
-              run: |
-                  bun install 
-                  bun run build
+      - name: Build bundle
+        run: node ./esbuild.config.mjs production
 
-            - name: Create release
-              env:
-                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-              run: |
-                  tag="${GITHUB_REF#refs/tags/}"
-
-                  gh release create "$tag" \
-                    --title="$tag" \
-                    --draft \
-                    main.js manifest.json styles.css
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          # upload built bundle files and useful assets into the GitHub Release
+          files: |
+            main.js
+            styles.css
+            # include all images in the assets folder (optional)
+            assets/**
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
