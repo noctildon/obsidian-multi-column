@@ -1,7 +1,7 @@
 {
 	"id": "multi-column",
 	"name": "Multi-column Plugin",
-	"version": "0.0.1",
+	"version": "0.0.4",
 	"minAppVersion": "1.8.10",
 	"description": "This plugin allows you to create multi-column layouts in your notes.",
 	"author": "noctildon",

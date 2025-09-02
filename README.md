@@ -4,7 +4,11 @@ A Obsidian plugin that adds multi-column layout support for note content. It pro
 
 ## Installation
 
-- write some instructions
+- Install BRAT plugin https://github.com/TfTHacker/obsidian42-brat in obsidian
+- In obsidian BRAT plugin setting, select Add beta plugin
+- Enter repo URL https://github.com/noctildon/obsidian-multi-column
+- Select latest version
+- Click Add plugin button
 
 
 ## Usage
